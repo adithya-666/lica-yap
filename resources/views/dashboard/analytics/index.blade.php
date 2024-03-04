@@ -189,10 +189,10 @@
                                 <div class="col-5">
                                     <div class="d-flex flex-row">
                                         <?php if ($PRINTTESTPERALLGROUP) { ?>
-                                            <a class="btn btn-light-info btn-sm test-data-action d-none mx-5 mb-1" id="confirm-print-all-test" data-transaction-id="">Print Test</a>
+                                            <a class="btn btn-light-info btn-sm test-data-action d-none mx-5 mb-1 hidden" id="confirm-print-all-test" data-transaction-id="">Print Test</a>
                                             <a class="btn btn-light-info btn-sm test-data-action d-none mx-5 mb-1 hidden" id="print-all-test" data-transaction-id="">Print Test</a>
                                         <?php } ?>
-                                        <button class="btn btn-light-success btn-sm test-data-action d-none mb-1" id="go-to-post-analytics-btn" data-transaction-id="">Finish Transaction</button>
+                                        <button class="btn btn-light-success btn-sm test-data-action d-none mb-1" id="go-to-post-analytics-btn" data-no-order=""  data-transaction-id="">Finish Transaction</button>
                                         <!-- <button class="btn btn-light-success btn-sm test-data-action d-none mb-1" id="finish-transaction-btn" data-transaction-id="">Finish Transaction</button> -->
                                     </div>
                                     <p class="mt-2">Patient History</p>

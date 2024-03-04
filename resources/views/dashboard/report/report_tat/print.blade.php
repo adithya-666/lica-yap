@@ -116,106 +116,186 @@
         <table id="tb_result" style="border: 1px solid black; margin: 5px; border-collapse: collapse;">
             <thead>
                 <tr>
-                    <th class="border-bottom" style="text-align: center;">No</th>
-                    <th class="border-bottom" style="text-align: center;">Tanggal</th>
-                    <th class="border-bottom" style="text-align: center;">No Lab</th>
-                    <th class="border-bottom" style="text-align: center;">Pendaftaran</th>
-                    <th class="border-bottom" style="text-align: center;">Analitik</th>
-                    <th class="border-bottom" style="text-align: center;">Validasi</th>
-                    <th class="border-bottom" style="text-align: center;">Cetak</th>
-                    <th class="border-bottom" style="text-align: center;">Total</th>
+                    <th style="text-align: center; border: 1px solid black; border-collapse: collapse;">No</th>
+                    <th style="text-align: center; border: 1px solid black; border-collapse: collapse;">Tanggal</th>
+                    <th style="text-align: center; border: 1px solid black; border-collapse: collapse;">No Lab</th>
+                    <th style="text-align: center; border: 1px solid black; border-collapse: collapse;">Check in Time</th>
+                    <th style="text-align: center; border: 1px solid black; border-collapse: collapse;">Analytic Time</th>
+                    <th style="text-align: center; border: 1px solid black; border-collapse: collapse;">Verify Time</th>
+                    <th style="text-align: center; border: 1px solid black; border-collapse: collapse;">Validate Time</th>
+                    <th style="text-align: center; border: 1px solid black; border-collapse: collapse;">Post Time</th>
                 </tr>
             </thead>
             <tbody>
                 <?php
                 $index = 1;
+                $total_time ='';
+                $date_time ='';
+                $finish_time ='';
                 $temp_totals = 0;
+                $total_raw = 0;
                 $count_tat_dibawah_target = 0;
                 $count_tat_diatas_target = 0;
                 $tat_in_seconds = 0;
                 $target_tat_in_seconds = 140 * 60;
-                foreach ($tatData as $data) {
-                    $checkin_time = \Carbon\Carbon::parse($data->checkin_time);
-                    $analytic = \Carbon\Carbon::parse($data->analytic_time);
-                    $validate = \Carbon\Carbon::parse($data->validate_time);
-                    $post = \Carbon\Carbon::parse($data->post_time);
+                $hasilPerHari = [];
+                $tanggalDitemukan = [];
+                $jumlahBarisPerTanggal = [];
+                $counterPerTanggal = [];
+                $tanggal_perhari = [];
+                $averange_time= 0;
+                $averange= 0;
+                foreach ($tatData as $key => $data) {
+    $checkin_time = \Carbon\Carbon::parse($data->checkin_time);
+    $analytic = \Carbon\Carbon::parse($data->analytic_time);
+    $verify = \Carbon\Carbon::parse($data->verify_time);
+    $validate = \Carbon\Carbon::parse($data->validate_time);
+    
+    if ($data->post_time != null || $data->post_time != '') {
+        $post = \Carbon\Carbon::parse($data->post_time);
+    }
 
-                    // analytic time
-                    $analytics = strtotime($analytic) - strtotime($checkin_time);
-                    $analytic_time = gmdate('H:i:s', $analytics);
-                    // validate time
-                    $validates = strtotime($validate) - strtotime($checkin_time);
-                    $validate_time = gmdate('H:i:s', $validates);
-                    // post time
-                    $posts = strtotime($post) - strtotime($checkin_time);
-                    $post_time = gmdate('H:i:s', $posts);
+    $date = date('d-m-Y', strtotime($data->created_time));
 
-                    // anal val
-                    $anal_val = $analytics + $validates;
-                    $total_raw = $posts + $anal_val;
+    $analytics = strtotime($analytic) - strtotime($checkin_time);
+    $analytic_time = gmdate('H:i:s', $analytics);
 
-                    $total = gmdate('H:i:s', $total_raw);
+    $validates = strtotime($validate) - strtotime($checkin_time);
+    $validate_time = gmdate('H:i:s', $validates);
 
-                    $tat_in_seconds = $total_raw;
+    $verifys = strtotime($verify) - strtotime($checkin_time);
+    $verify_time = gmdate('H:i:s', $validates);
 
-                    if ($tat_in_seconds <= $target_tat_in_seconds) {
-                        $count_tat_dibawah_target++;
-                    } else {
-                        $count_tat_diatas_target++;
-                    }
+    if ($data->post_time != null || $data->post_time != '') {
+        $posts = strtotime($post) - strtotime($checkin_time);
+        $post_time = gmdate('H:i:s', $posts);
 
-                ?>
-                    <tr>
-                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $index }}</td>
-                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ date('d/m/Y', strtotime($data->created_time)) }}</td>
-                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $data->no_lab }}</td>
-                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ date('d/m/Y H:i:s', strtotime($checkin_time)) }}</td>
-                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">+ {{ $analytic_time }} </td>
-                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">+ {{ $validate_time }} </td>
-                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">+ {{ $post_time }} </td>
-                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;"> {{ $total }} </td>
-                    </tr>
-                <?php
-                    $index++;
-                    $temp_totals += $total_raw;;
-                }
-                ?>
+        $anal_val = $analytics + $validates + $verifys;
+        $total_raw = $posts + $anal_val;
+    } else {
+        $post_time = '-';
+        $posts = 0;
+        $anal_val = $analytics + $validates + $verifys;
+        $total_raw = $posts + $anal_val;
+    }
 
-            </tbody>
-        </table>
+    if (!isset($hasilPerHari[$date])) {
+        $hasilPerHari[$date] = [
+            'sum' => 0,
+            'date' => $date,
+            'jumlah' => 0
+        ];
+    }
 
-        @php
-        $average = $temp_totals / ($index - 1);
-        $average_time = gmdate('H:i:s', $average);
+    $tatData[$key]->analytic_time =  $analytic_time;
+    $tatData[$key]->validate_time =  $validate_time;
+    $tatData[$key]->verify_time =  $verify_time;
+    $tatData[$key]->post_time =  $post_time;
 
-        $sum = $temp_totals;
-        $sum_time = gmdate('H:i:s', $sum);
+    $hasilPerHari[$date]['sum'] += $total_raw;
+   
 
-        $jam = floor($sum / (60 * 60));
-        $menit = $sum - ( $jam * (60 * 60) );
-        $detik = $sum % 60;
+    // Cek apakah tanggal sudah ditemukan sebelumnya
+    // if (!in_array($date, $tanggalDitemukan)) {
+    //     $tanggalDitemukan[] = $date;
+      
+      
+    //     foreach ($hasilPerHari as $dates => $hasil) {
 
-        @endphp
+    //  $sum = $hasil['sum'];
+    //  $jam = floor($sum / 3600);
+    //  $menit = floor(($sum % 3600) / 60);
+    //  $detik = $sum % 60;
+    //  $total_time = $jam . ' Jam ' . $menit . ' Menit ' . $detik . ' Detik';
 
-        <table>
-            <tr>
-                <td width="20%" style="font-weight:bold">Rata-rata Total</td>
-                <td width="2%" style="font-weight:bold">:</td>
-                <td width="20" style="font-weight:bold">{{ $average_time }}</td>
-                <td width="20%" style="font-weight:bold">
-                    <= 140 Menit </td>
-                <td width="2%" style="font-weight:bold">:</td>
-                <td width="20%" style="font-weight:bold">{{ $count_tat_dibawah_target }}</td>
-            </tr>
-            <tr>
-                <td width="20%" style="font-weight:bold">Jumlah Kumulatif</td>
-                <td width="2%" style="font-weight:bold">:</td>
-                <td width="20" style="font-weight:bold">{{{ $jam }}} Jam {{ floor( $menit / 60 ) }} Menit {{ $detik }} Detik </td>
-                <td style="font-weight:bold"> > 140 Menit </td>
-                <td style="font-weight:bold">:</td>
-                <td style="font-weight:bold">{{ $count_tat_diatas_target }}</td>
-            </tr>
-        </table>
+    // }
+    //       $total_time = $total_time;
+    // } else {
+    //     $total_time = '-';
+    // }
+
+    // // Simpan total_time dalam objek data
+    // $tatData[$key]->total_time = $total_time;
+  
+
+
+
+    $total = gmdate('H:i:s', $total_raw);
+
+
+      
+?>
+
+
+
+
+
+    <tr>
+        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $index }}</td>
+        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ date('d/m/Y', strtotime($data->created_time)) }}</td>
+        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $data->no_lab }}</td>
+        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ date('d/m/Y H:i:s', strtotime($checkin_time)) }}</td>
+        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">+ {{ $data->analytic_time }} </td>
+        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">+ {{ $data->verify_time }} </td>
+        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">+ {{ $data->validate_time }} </td>
+        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">
+            @if($data->post_time != '-' )
+            +    {{ $data->post_time }} 
+            @else
+            -
+            @endif
+           
+        </td>
+   
+    </tr>
+    <?php
+    $index++;
+    $hasilPerHari[$date]['jumlah'] = $index;
+    }
+    ?>
+    </tbody>
+
+
+
+</table>
+<?php
+//   echo '<pre>';
+//   print_r($hasilPerHari);
+//       die;
+$x = 1;
+    ?>
+
+
+<table  id="tb_result" style="border: 1px solid black; margin-top: 15px; margin-left:0px; border-collapse: collapse; width:50%;">
+    <thead>
+        <tr>
+            <td style="text-align: center; border: 1px solid black; ">No.</td>
+            <td style="text-align: center; border: 1px solid black; ">Tanggal</td>
+            <td style="text-align: center; border: 1px solid black; ">RATA - RATA TOTAL</td>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($hasilPerHari as $dates => $hasil) 
+@if( $date_time == '' || $date_time != $hasil['date'] )
+@php
+    $date_time = $hasil['date'];
+    $sum = $hasil['sum'];
+    $averange_time = $sum / ($hasil['jumlah'] - 1);
+    $averange = gmdate('H:i:s', $averange_time);
+@endphp
+        <tr>
+           <td style="text-align: center; border: 1px solid black; ">{{ $x }}</td>
+           <td style="text-align: center; border: 1px solid black; ">{{ $hasil['date'] }}</td>
+           <td style="text-align: center; border: 1px solid black; ">{{ $averange }}</td>
+        </tr>
+        @endif
+<?php
+$x++;
+?>
+@endforeach
+
+    </tbody>
+</table>
 </body>
 
 </html>

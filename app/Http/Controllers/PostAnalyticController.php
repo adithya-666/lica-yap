@@ -17,7 +17,7 @@ class PostAnalyticController extends Controller
         return view('dashboard.post_analytics.index', $data);
     }
 
-    public function datatable($startDate = null, $endDate = null, $group_id = null)
+    public function datatable($startDate = null, $endDate = null, $group_id = null, Request $request)
     {
         $area_id = session('area_id');
         $is_igd = 0;
@@ -46,9 +46,11 @@ class PostAnalyticController extends Controller
         if ($group_id != null && $group_id != "null" && $group_id != 0) {
             $model->groupBy('finish_transaction_tests.finish_transaction_id');
         }
-        $model->orderBy('created_time', 'desc');
-        $model->orderBy('cito', 'desc');
-
+        // $model->orderBy('created_time', 'desc');
+        $model->orderBy('status_erm', 'asc');
+        $model->orderBy('print', 'asc')
+        ;
+        // return response()->json($request);
         return DataTables::of($model)
             ->addIndexColumn()
             ->escapeColumns([])

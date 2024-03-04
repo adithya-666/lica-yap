@@ -231,10 +231,12 @@ class PreAnalyticController extends Controller
         }
 
         $model = \App\TestPreAnalyticsView::where(function ($q) use ($roomClass) {
-            // $q->where('class', $roomClass);
+            // $q->where('class', $roomClass)
             // ->orWhere('class', '0')
             // ->orWhereNull('class');
         })->whereNotIn('unique_id', $uniqueIds)->whereNotIn('unique_id', $uniqueZeroClassIds)->groupBy('unique_id');
+
+
 
         return DataTables::of($model)
             ->addIndexColumn()
@@ -881,6 +883,7 @@ class PreAnalyticController extends Controller
                 $inputData['test_id'] = NULL;
                 $inputData['package_id'] = NULL;
                 $inputData['input_time'] = Carbon::now()->toDateTimeString();
+                $inputData['is_print'] = TRUE;
                 if ($autoDraw) {
                     $inputData['draw'] = true;
                     $inputData['draw_time'] = $now;
@@ -891,18 +894,19 @@ class PreAnalyticController extends Controller
                 $checkDefaultAnalyzer = \App\Analyzer::where('group_id', $test->group_id)->where('is_default', 1)->first();
                 $analyzerFromInterfacing = DB::table('interfacings')->where('test_id', $test->id)->first();
                 if ($checkDefaultAnalyzer) {
-                    if (!empty($analyzerFromInterfacing)) {
+                    // if (!empty($analyzerFromInterfacing)) {
 
-                        if ($analyzerFromInterfacing->analyzer_id == $checkDefaultAnalyzer->id) {
+                    //     if ($analyzerFromInterfacing->analyzer_id == $checkDefaultAnalyzer->id) {
 
-                            $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
-                        } else {
-                            $inputData['analyzer_id'] = $analyzerFromInterfacing->analyzer_id;
-                        }
-                    } else {
+                    //         $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
+                    //     } else {
+                    //         $inputData['analyzer_id'] = $analyzerFromInterfacing->analyzer_id;
+                    //     }
+                    // } else {
 
-                        $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
-                    }
+                    //     $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
+                    // }
+                    $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
                 } else {
                     $inputData['result_label'] = null;
                     if ($analyzerFromInterfacing) {
@@ -1043,18 +1047,19 @@ class PreAnalyticController extends Controller
             $checkDefaultAnalyzer = \App\Analyzer::where('group_id', $test->group_id)->where('is_default', 1)->first();
             $analyzerFromInterfacing = DB::table('interfacings')->where('test_id', $test->test_id)->first();
             if ($checkDefaultAnalyzer) {
-                if (!empty($analyzerFromInterfacing)) {
+                // if (!empty($analyzerFromInterfacing)) {
 
-                    if ($analyzerFromInterfacing->analyzer_id == $checkDefaultAnalyzer->id) {
+                //     if ($analyzerFromInterfacing->analyzer_id == $checkDefaultAnalyzer->id) {
 
-                        $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
-                    } else {
-                        $inputData['analyzer_id'] = $analyzerFromInterfacing->analyzer_id;
-                    }
-                } else {
+                //         $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
+                //     } else {
+                //         $inputData['analyzer_id'] = $analyzerFromInterfacing->analyzer_id;
+                //     }
+                // } else {
 
-                    $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
-                }
+                //     $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
+                // }
+                $inputData['analyzer_id'] = $checkDefaultAnalyzer->id;
             } else {
                 $inputData['result_label'] = null;
                 if ($analyzerFromInterfacing) {

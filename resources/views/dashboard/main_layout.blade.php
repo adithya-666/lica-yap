@@ -104,10 +104,10 @@ License: For each use you must have a valid license purchased only from above li
 						<!--end::Aside mobile toggle-->
 						<!--begin::Logo-->
 						<div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-lg-15">
-							<a href="{{ url('/') }}">
-								<!-- <img alt="Logo" src="{{ url('metronic_assets/media/logos/logo-1.svg') }}" class="h-20px h-lg-30px" /> -->
-								<img alt="Logo" src="{{ url('metronic_assets/media/logos/logo-lica2.png') }}" style="height: 480x; width: 80px" />
-							</a>
+							<!-- <a href="{{ url('/') }}">
+								 <img alt="Logo" src="{{ url('metronic_assets/media/logos/logo-1.svg') }}" class="h-20px h-lg-30px" /> -->
+								<img alt="Logo" src="{{ url('metronic_assets/media/logos/logo-lica2.png') }}" style="height: 480x; width: 80px" /> 
+							<!--</a> -->
 						</div>
 						<!--end::Logo-->
 						<!--begin::Wrapper-->
@@ -370,11 +370,27 @@ License: For each use you must have a valid license purchased only from above li
 																</a>
 															</div>
 															<div class="menu-item">
+																<a href="{{ url('report/history-patient') }}" class="menu-link">
+																	<span class="menu-bullet">
+																		<span class="bullet bullet-dot"></span>
+																	</span>
+																	<span class="menu-title">History Patient Report</span>
+																</a>
+															</div>
+															<div class="menu-item">
 																<a href="{{ url('report/test') }}" class="menu-link">
 																	<span class="menu-bullet">
 																		<span class="bullet bullet-dot"></span>
 																	</span>
 																	<span class="menu-title">Test Report</span>
+																</a>
+															</div>
+															<div class="menu-item">
+																<a href="{{ url('report/testDetailReport') }}" class="menu-link">
+																	<span class="menu-bullet">
+																		<span class="bullet bullet-dot"></span>
+																	</span>
+																	<span class="menu-title">Test Detail Report</span>
 																</a>
 															</div>
 															<div class="menu-item">
@@ -503,6 +519,16 @@ License: For each use you must have a valid license purchased only from above li
 																		<span class="bullet bullet-dot"></span>
 																	</span>
 																	<span class="menu-title">User Process Report</span>
+																</a>
+															</div>
+														</div>
+														<div class="menu-inline menu-column menu-active-bg">
+															<div class="menu-item">
+																<a href="{{ url('report/support-activities') }}" class="menu-link">
+																	<span class="menu-bullet">
+																		<span class="bullet bullet-dot"></span>
+																	</span>
+																	<span class="menu-title">Support Activities LAB Report</span>
 																</a>
 															</div>
 														</div>

@@ -122,10 +122,12 @@ class ApiController extends Controller
             }
 
             // Insert Transaction
+            // DD($transaksi['kode_ruangan']);  DD($transaksi['kode_ruangan']);
 
             // Insert Rooms
             $query = DB::table('rooms')->where('general_code', $transaksi['kode_ruangan'])->where('type', $type);
             $room_data = $query->first();
+          
 
             if (empty($room_data)) {
                 DB::rollback();
@@ -234,6 +236,8 @@ class ApiController extends Controller
                 // get transaction id
                 $transaction_id = DB::getPdo()->lastInsertId();
 
+              
+
                 // Transaction Test
                 foreach ($tests as $test => $value) {
                     $query = DB::table('packages')->where('general_code', $value['kode_jenis_tes']);
@@ -252,24 +256,26 @@ class ApiController extends Controller
 
                             if ($checkDefaultAnalyzer) {
 
-                                if (!empty($analyzerFromInterfacing)) {
+                                // if (!empty($analyzerFromInterfacing)) {
 
-                                    if ($analyzerFromInterfacing->analyzer_id == $checkDefaultAnalyzer->id) {
+                                //     if ($analyzerFromInterfacing->analyzer_id == $checkDefaultAnalyzer->id) {
 
-                                        $analyzer_id = $checkDefaultAnalyzer->id;
-                                    } else {
-                                        $analyzer_id = $analyzerFromInterfacing->analyzer_id;
-                                    }
-                                } else {
+                                //         $analyzer_id = $checkDefaultAnalyzer->id;
+                                //     } else {
+                                //         $analyzer_id = $analyzerFromInterfacing->analyzer_id;
+                                //     }
+                                // } else {
 
-                                    $analyzer_id = null;
-                                }
+                                //     $analyzer_id = null;
+                                // }
 
                                 $result_label = null;
                                 $checkDefaultLabel = \App\Result::selectRaw('results.id, results.status as result_status, tests.range_type')->where('test_id', $package_test->test_id)->join('tests', 'tests.id', '=', 'results.test_id')->where('is_default', 1)->where('tests.range_type', '=', 'label')->first();
                                 if ($checkDefaultLabel) {
                                     $result_label = $checkDefaultLabel->id;
                                 }
+
+                                $analyzer_id = $checkDefaultAnalyzer->id;
 
                                 // echo 'test id ' . $package_test->test_id . '<br>';
                                 // echo 'result label ' . $result_label . '<br>';
@@ -347,24 +353,26 @@ class ApiController extends Controller
                             $analyzerFromInterfacing = DB::table('interfacings')->where('test_id', $test_data->id)->first();
                             if ($checkDefaultAnalyzer) {
 
-                                if (!empty($analyzerFromInterfacing)) {
+                                // if (!empty($analyzerFromInterfacing)) {
 
-                                    if ($analyzerFromInterfacing->analyzer_id == $checkDefaultAnalyzer->id) {
+                                //     if ($analyzerFromInterfacing->analyzer_id == $checkDefaultAnalyzer->id) {
 
-                                        $analyzer_id = $checkDefaultAnalyzer->id;
-                                    } else {
-                                        $analyzer_id = $analyzerFromInterfacing->analyzer_id;
-                                    }
-                                } else {
+                                //         $analyzer_id = $checkDefaultAnalyzer->id;
+                                //     } else {
+                                //         $analyzer_id = $analyzerFromInterfacing->analyzer_id;
+                                //     }
+                                // } else {
 
-                                    $analyzer_id = null;
-                                }
+                                //     $analyzer_id = null;
+                                // }
 
                                 $result_label = null;
                                 $checkDefaultLabel = \App\Result::selectRaw('results.id, results.status as result_status, tests.range_type')->where('test_id', $test_data->id)->join('tests', 'tests.id', '=', 'results.test_id')->where('is_default', 1)->where('tests.range_type', '=', 'label')->first();
                                 if ($checkDefaultLabel) {
                                     $result_label = $checkDefaultLabel->id;
                                 }
+
+                                $analyzer_id = $checkDefaultAnalyzer->id;
 
                                 DB::table('transaction_tests')
                                     ->insert([
@@ -381,7 +389,6 @@ class ApiController extends Controller
                                 if (!empty($analyzerFromInterfacing)) {
                                     $analyzer_id = $analyzerFromInterfacing->analyzer_id;
                                 } else {
-
                                     $analyzer_id = null;
                                 }
 
@@ -720,7 +727,7 @@ class ApiController extends Controller
             // $query = DB::table('finish_transaction_tests')->selectRaw('finish_transaction_tests.result_status as flag, finish_transaction_tests.test_unit as unit, finish_transaction_tests.result as result, finish_transaction_tests.test_name as test_name, finish_transaction_tests.normal_value as nilai_normal, finish_transaction_tests.memo_test as notes')->join('transactions', 'finish_transaction_tests.transaction_id', '=', 'transactions.id')->where('transactions.no_order', $order_id);
             // $result_data = $query->get();
 
-            $tests = DB::table('finish_transaction_tests')->where('finish_transaction_id', $transaction_data->id)->get();
+            $tests = DB::table('finish_transaction_tests')->where('finish_transaction_id', $transaction_data->id)->where('is_print', 1)->get();
             $test_result = [];
             foreach ($tests as $val => $test) {
 
@@ -742,19 +749,44 @@ class ApiController extends Controller
 
                 $normal_value = strip_tags($test->normal_value);
 
-                $test_result[$val]['flag'] = $test->result_status_label;
-                $test_result[$val]['unit'] = $test->unit;
-                $test_result[$val]['result'] = $test->global_result;
-                $test_result[$val]['test_id'] = $test->test_id;
-                $test_result[$val]['test_name'] = $test->test_name;
-                $test_result[$val]['package_id'] = $package_id;
+                // $test_result[$val]['flag'] = $test->result_status_label;
+                // $test_result[$val]['unit'] = $test->unit;
+                // $test_result[$val]['result'] = $test->global_result;
+                // $test_result[$val]['test_id'] = $test->test_id;
+                // $test_result[$val]['test_name'] = $test->test_name;
+                // $test_result[$val]['package_id'] = $package_id;
+                // $test_result[$val]['kode_jenis_tes'] = $kode_jenis_tes;
+                // $test_result[$val]['group_test'] = $test->group_name;
+                // $test_result[$val]['nilai_normal'] = $normal_value;
+                // $test_result[$val]['notes'] = $test->memo_test;
+
                 $test_result[$val]['kode_jenis_tes'] = $kode_jenis_tes;
+                $test_result[$val]['test_name'] = $test->test_name;
+                $test_result[$val]['initial'] = $test->initial;
+                $test_result[$val]['package_name'] = $test->package_name;
                 $test_result[$val]['group_test'] = $test->group_name;
+                $test_result[$val]['sub_group'] = $test->sub_group;
+                $test_result[$val]['specimen_name'] = $test->specimen_name;
+                $test_result[$val]['type'] = $test->type;
+                $test_result[$val]['unit'] = $test->unit;
+                $test_result[$val]['volume'] = $test->volume;
+                $test_result[$val]['sequence'] = $test->sequence;
+                $test_result[$val]['mark_duplo'] = $test->mark_duplo;
+                $test_result[$val]['result'] = $test->global_result;
+                $test_result[$val]['flag'] = $test->result_status_label;
                 $test_result[$val]['nilai_normal'] = $normal_value;
                 $test_result[$val]['notes'] = $test->memo_test;
+                $test_result[$val]['draw_time'] = $test->draw_time;
+                $test_result[$val]['verify_time'] = $test->verify_time;
+                $test_result[$val]['validate_time'] = $test->validate_time;
+                $test_result[$val]['report_time'] = $test->report_time;
+                $test_result[$val]['report_by'] = $test->report_by;
+                $test_result[$val]['report_to'] = $test->report_to;
+                // $test_result[$val]['memo_result'] = $test->memo_result;
             }
 
             $data['no_ref'] = $transaction_data->no_order;
+            $data['memo_result'] = $transaction_data->memo_result;
             $data['tgl_kirim'] = $transaction_data->post_time;
             $data['hasil'] = $test_result;
 
@@ -798,81 +830,158 @@ class ApiController extends Controller
 
     public function sendResult($no_order)
     {
-        $url = url('api/get_result/' . $no_order);
-        $query = DB::table('master_auth_api')->where('api', 'simrs');
-        $api_key = $query->first();
-        $key = $api_key->key;
+        try {
+ 
+            $url = url('api/get_result/' . $no_order);
+            $query = DB::table('master_auth_api')->where('api', 'simrs');
+            $api_key = $query->first();
+            $key = $api_key->key;
 
-        // print_r($url);
-        $ch = curl_init($url);
+            // print_r($url);
+            // die;
+            $ch = curl_init($url);
 
-        $header = array(
-            'Content-Type: application/json',
-            'x-api-key: ' . $key
-        );
+            $header = array(
+                'Content-Type: application/json',
+                'x-api-key: ' . $key
+            );
 
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-        curl_setopt($ch, CURLOPT_POST, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            // echo 'masuk';
+            // die;
 
-        $result = curl_exec($ch);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+            curl_setopt($ch, CURLOPT_POST, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-        $endpoints = DB::table('master_result_integration')->get();
-        foreach ($endpoints as $endpoint) {
-            $curl = curl_init($endpoint->url);
-            $header = [];
-            $parameters = DB::table('master_parameter_integration')->where('id_integration', $endpoint->id)->get();
-            foreach ($parameters as $param) {
-                $header[] = $param->parameter_name . ': ' . $param->parameter_value;
-            }
+            $result = curl_exec($ch);
+          
+            // return response()->json($result);
+            $endpoints = DB::table('master_result_integration')->get();
+            $a = array();
 
-            curl_setopt($curl, CURLOPT_POST, 1);
-            curl_setopt($curl, CURLOPT_HTTPHEADER, $header);
+            // update status erm, status_erm
+            DB::table('finish_transactions')->where('no_order', $no_order)->update(
+                ['status_erm' => 1]
+            );
+            // return response()->json($current_transaction);
+            // $current_transaction->status_erm = 1;
+            // $current_transaction->save();
 
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $result);
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-
-            $simrs_response = curl_exec($curl);
-
-            $decode_response = json_decode($simrs_response);
-            foreach ($decode_response as $responseData) {
-
-                if($responseData->code == 200){
-                    $result_data = json_decode($result);
-                    DB::table('log_integrations')
-                        ->insert([
-                            'created_at' => Carbon::now(),
-                            'no_order' => $result_data->no_ref,
-                            'return_result' => $result,
-                            'simrs_response' => $simrs_response,
-                            'timestamp' => Carbon::now(),
-                            'type' => 'SEND DATA',
-                            'status' => "send_result_success",
-                            'status_sequence' => 0,
-                            'notes' => 'http://192.168.71.2/webservice/lica/hasil/insert',
-                            'status_2' => 0,
-                            'created_at' => Carbon::now(),
-                            'updated_at' => null
-                        ]);
-                }else{
-                    DB::table('log_integrations')
-                        ->insert([
-                            'created_at' => Carbon::now(),
-                            'no_order' => $result_data->no_ref,
-                            'return_result' => $result,
-                            'simrs_response' => $simrs_response,
-                            'timestamp' => Carbon::now(),
-                            'type' => 'SEND DATA',
-                            'status' => "send_result_failed",
-                            'status_sequence' => 0,
-                            'notes' => 'http://192.168.71.2/webservice/lica/hasil/insert',
-                            'status_2' => 0,
-                            'created_at' => Carbon::now(),
-                            'updated_at' => null
-                        ]);
+            foreach ($endpoints as $endpoint) {
+                $curl = curl_init($endpoint->url);
+                $header = [];
+                $parameters = DB::table('master_parameter_integration')->where('id_integration', $endpoint->id)->get();
+                foreach ($parameters as $param) {
+                    $header[] = $param->parameter_name . ': ' . $param->parameter_value;
                 }
-                    
+
+                curl_setopt($curl, CURLOPT_POST, 1);
+                curl_setopt($curl, CURLOPT_HTTPHEADER, $header);
+
+                curl_setopt($curl, CURLOPT_POSTFIELDS, $result);
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
+                $simrs_response = curl_exec($curl);
+                // return response(strtok($simrs_response, '}'));
+                $decode_response_check = json_decode(strtok($simrs_response, '}') . '}');
+                $decode_response = json_decode($simrs_response);
+
+                // dd($result);
+                // $a[] = $decode_response;
+                // return response()->json($decode_response);
+
+
+                // HAPUS INI KALAU API UDAH DIBENERIN
+                // if (!is_array($decode_response_check)) {
+                //     if ($decode_response_check->code != 200) {
+                //         $result_data = json_decode($result);
+                //         DB::table('log_integrations')
+                //         ->insert([
+                //             'created_at' => Carbon::now(),
+                //             'no_order' => $result_data->no_ref,
+                //             'return_result' => $result,
+                //             'simrs_response' => strtok($simrs_response, '}') . '}',
+                //             'timestamp' => Carbon::now(),
+                //             'type' => 'SEND DATA',
+                //             'status' => "send_result_failed",
+                //             'status_sequence' => 0,
+                //             'notes' => 'http://192.168.1.11/labpk/api/LIS/insert-result',
+                //             'status_2' => 0,
+                //             'created_at' => Carbon::now(),
+                //             'updated_at' => null
+                //         ]);
+
+                //         throw new \Exception("Invalid");
+                //     }    
+                // }
+                
+                // if ($decode_response != NULL || !is_array($decode_response)) {
+                //     continue;
+                // }
+
+
+                // foreach ($decode_response as $responseData) {
+
+                //     if($responseData->code == 200){
+                //         $result_data = json_decode($result);
+                //         DB::table('log_integrations')
+                //             ->insert([
+                //                 'created_at' => Carbon::now(),
+                //                 'no_order' => $result_data->no_ref,
+                //                 'return_result' => $result,
+                //                 'simrs_response' => $simrs_response,
+                //                 'timestamp' => Carbon::now(),
+                //                 'type' => 'SEND DATA',
+                //                 'status' => "send_result_success",
+                //                 'status_sequence' => 0,
+                //                 'notes' => 'http://192.168.1.11/labpk/api/LIS/insert-result',
+                //                 'status_2' => 0,
+                //                 'created_at' => Carbon::now(),
+                //                 'updated_at' => null
+                //             ]);
+                //     }else{
+                //         DB::table('log_integrations')
+                //             ->insert([
+                //                 'created_at' => Carbon::now(),
+                //                 'no_order' => $result_data->no_ref,
+                //                 'return_result' => $result,
+                //                 'simrs_response' => $simrs_response,
+                //                 'timestamp' => Carbon::now(),
+                //                 'type' => 'SEND DATA',
+                //                 'status' => "send_result_failed",
+                //                 'status_sequence' => 0,
+                //                 'notes' => 'http://192.168.1.11/labpk/api/LIS/insert-result',
+                //                 'status_2' => 0,
+                //                 'created_at' => Carbon::now(),
+                //                 'updated_at' => null
+                //             ]);
+                //     }
+                        
+                // }
+
             }
+            $result_data = json_decode($result);
+            DB::table('log_integrations')
+                ->insert([
+                    'created_at' => Carbon::now(),
+                    'no_order' => $result_data->no_ref,
+                    'return_result' => $result,
+                    'simrs_response' => 'SIMRS no response',
+                    'timestamp' => Carbon::now(),
+                    'type' => 'SEND DATA',
+                    'status' => "send_result_success",
+                    'status_sequence' => 0,
+                    'notes' => 'http://192.168.1.11/labpk/api/LIS/insert-result',
+                    'status_2' => 0,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => null
+                ]);
+
+            // return response()->json($a);
+            return response()->json(['message' => 'integration_success']);
+        } catch(\Exception $e) {
+            return response()->json($e->getMessage());
+            return response()->json(['message' => 'failed']);
         }
     }
 

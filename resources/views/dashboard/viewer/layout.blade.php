@@ -104,10 +104,10 @@ License: For each use you must have a valid license purchased only from above li
                         <!--end::Aside mobile toggle-->
                         <!--begin::Logo-->
                         <div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-lg-15">
-                            <a href="{{ url('/') }}">
+                            <!-- <a href="{{ url('/') }}"> -->
                                 <!-- <img alt="Logo" src="{{ url('metronic_assets/media/logos/logo-1.svg') }}" class="h-20px h-lg-30px" /> -->
                                 <img alt="Logo" src="{{ url('metronic_assets/media/logos/logo-lica2.png') }}" style="height: 480x; width: 80px" />
-                            </a>
+                            <!-- </a> -->
                         </div>
                         <!--end::Logo-->
                         <!--begin::Wrapper-->

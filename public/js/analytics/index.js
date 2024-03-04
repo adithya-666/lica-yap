@@ -137,7 +137,13 @@ var refreshPatientDetails = (data, transactionId) => {
   $(".insurance-detail").html(data.insurance.name);
   $('#confirm-print-all-test').on('click', function(){
     printAndGotoAnalytic(transactionId)
-  })
+  });
+
+  const no_order = data.no_order; 
+
+  $("#go-to-post-analytics-btn").data("no-order", no_order);
+
+  console.log(data);
   // $('#verify-all-btn').data('transaction-id', transactionId);
   // $('#unverify-all-btn').data('transaction-id', transactionId);
   // $('#validate-all-btn').data('transaction-id', transactionId);
@@ -506,9 +512,9 @@ var memoTestModal = (transactionTestId, transactionId, text) => {
     confirmButtonText: 'Submit',
     showLoaderOnConfirm: true,
     preConfirm: (reason) => {
-      if (reason == '') {
-        Swal.showValidationMessage(`Please enter a memo`)
-      }
+      // if (reason == '') {
+      //   Swal.showValidationMessage(`Please enter a memo`)
+      // }
       return { reason: reason }
     },
     allowOutsideClick: false
@@ -605,6 +611,24 @@ var goToPostAnalyticBtn = () => {
         alert(request.responseJSON.message);       
       }
     })
+
+    const no_order = $(this).data('no-order');
+
+    $.ajax({
+      url: baseUrl('api/send_result/'+no_order),
+      type: 'get',
+      success: function(data) {
+        if(data.message == 'integration_success'){
+          // alert('Send data to ERM successfully');
+          console.log('Send data to ERM successfully');
+          // $('#btn-send-result').prop('disabled', true);
+        }else{
+          // alert('Send data to ERM failed');
+          console.log('Send data to ERM failed');
+          // $('#btn-send-result').prop('disabled', false);
+        }
+      }
+    });
   });
 }
 

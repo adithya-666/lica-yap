@@ -180,6 +180,7 @@ Route::middleware(['auth'])->group(function () {
     //for printing
     Route::get('/printTestGroup/{groupId}/{transactionId}', 'PrintController@printTestGroup');     // print test by group in analytic
     Route::get('/printHasilTest/{id}', 'PrintController@hasilTest');                               // print post option BAHASA INDONESIA
+    Route::get('/printHasilTestWatermark/{id}', 'PrintController@hasilTestWatermark');                               // print post option BAHASA INDONESIA
     Route::get('/printAnalyticResult/{id}', 'PrintController@printAnalytic');                      // print analytic option BAHASA INDONESIA
 
     // Route::get('/barcode/{id}', 'PrintController@barcode');
@@ -191,10 +192,11 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('report')->group(function () {
 
         // for select option form
-        Route::get('/select-options', 'ReportController@selectOptionsType');
-        Route::get('/select-patient-options', 'ReportController@selectOptionsPatient');
-        Route::get('/select-insurance-options', 'ReportController@selectOptionsInsurance');
-        Route::get('/select-doctor-options', 'ReportController@selectOptionsDoctor');
+      Route::get('/select-options', 'ReportController@selectOptionsType');
+      Route::get('/select-patient-options', 'ReportController@selectOptionsPatient');
+      Route::get('/select-insurance-options', 'ReportController@selectOptionsInsurance');
+      Route::get('/select-doctor-options', 'ReportController@selectOptionsDoctor');
+      Route::get('/select-test-options', 'ReportController@selectOptionsTest');
 
         // CRITICAL REPORT
         Route::get('/critical', 'ReportController@criticalReport');
@@ -211,21 +213,34 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/group-test-datatable/{startDate?}/{endDate?}/{groupId?}', 'ReportController@groupTestDatatable');
         Route::get('/group-test-print/{startDate?}/{endDate?}/{groupId?}', 'ReportController@groupTestPrint');
 
-        // TAT REPORT
-        Route::get('/tat', 'ReportController@TATReport');
-        Route::get('/tat-datatable/{startDate?}/{endDate?}', 'ReportController@TATDatatable');
-        Route::get('/tat-print/{startDate?}/{endDate?}', 'ReportController@TATPrint');
-        Route::get('/tat-group-print/{startDate?}/{endDate?}', 'ReportController@TATGroupPrint');
+       // TAT REPORT
+       Route::get('/tat', 'ReportController@TATReport');
+       Route::get('/tat-datatable/{startDate?}/{endDate?}', 'ReportController@TATDatatable');
+       Route::get('/tat-print/{startDate?}/{endDate?}', 'ReportController@TATPrint');
+       Route::get('/tat-group-print/{startDate?}/{endDate?}', 'ReportController@TATGroupPrint');
+       Route::get('/tat-export/{startDate?}/{endDate?}', 'ReportController@TATExcel');
 
         // TAT Target REPORT
         Route::get('/tat-target', 'ReportController@TATTargetReport');
         Route::get('/tat-target-datatable/{startDate?}/{endDate?}', 'ReportController@TATTargetDatatable');
         Route::get('/tat-target-print/{startDate?}/{endDate?}', 'ReportController@TATTargetPrint');
 
+           // SUPPORT AND ACTIVITIES REPORT
+           Route::get('/support-activities', 'ReportController@SupportActivitiesReport');
+           Route::get('/support-activities-datatable/{startDate?}/{endDate?}/{insurance_id?}', 'ReportController@SupportActivitiesDatatable');
+           Route::get('/support-activities-print/{startDate?}/{endDate?}/{insurance_id?}', 'ReportController@SupportActivitiesPrint');
+           Route::get('/support-activities-export/{startDate?}/{endDate?}/{insurance_id?}', 'ReportController@SupportActivitiesExcel');
+
         // TAT CITO REPORT
         Route::get('/tat-cito', 'ReportController@TATCitoReport');
         Route::get('/tat-cito-datatable/{startDate?}/{endDate?}', 'ReportController@TATCitoDatatable');
         Route::get('/tat-cito-print/{startDate?}/{endDate?}', 'ReportController@TATCitoPrint');
+
+         //HISTORY PATIENT REPORT
+       Route::get('/history-patient', 'ReportController@historyPatientReport');
+       Route::get('/history-patient-datatable/{startDate?}/{endDate?}/{typeId?}/{patientId?}', 'ReportController@historyPatientDatatable');
+       Route::get('/history-patient-print/{startDate?}/{endDate?}/{typeId?}/{patientId?}', 'ReportController@historyPatientPrint');
+       Route::get('/history-patient-excel/{startDate?}/{endDate?}/{typeId?}/{patientId?}', 'ReportController@historyPatientExcel');
 
         // PATIENT REPORT
         Route::get('/patient', 'ReportController@patientReport');
@@ -241,6 +256,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/test', 'ReportController@testReport');
         Route::get('/test-datatable/{startDate?}/{endDate?}/{testId?}', 'ReportController@testDatatable');
         Route::get('/test-print/{startDate?}/{endDate?}/{testId?}', 'ReportController@testPrint');
+
+               // TEST DETAIL REPORT
+       Route::get('/testDetailReport', 'ReportController@testDetailReport');
+       Route::get('/test-detail-datatable/{startDate?}/{endDate?}/{typeId?}', 'ReportController@testDetailDatatable');
+       Route::get('/test-detail-print/{startDate?}/{endDate?}/{typeId?}', 'ReportController@printTestDetail');
+       Route::get('/test-detail-excel/{startDate?}/{endDate?}/{typeId?}', 'ReportController@exportExcelTestDetail');
 
         // SARS COV-2 ANTIGEN REPORT
         Route::get('/sars-cov', 'ReportController@sarsCovReport');

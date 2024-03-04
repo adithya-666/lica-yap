@@ -1173,7 +1173,7 @@ class AnalyticController extends Controller
                     "input_time" => $value->input_time,
                     "verify" => $value->verify,
                     "validate" => $value->validate,
-                    "print_package_name" => $value->print_package_name,
+                    "print_package_name" => TRUE,
                     "report_status" => $value->report_status,
                     "report_by" => $value->report_by,
                     "report_to" => $value->report_to,
@@ -1253,9 +1253,9 @@ class AnalyticController extends Controller
                     ->insert($data_insert_transactions_test);
             }
 
-            if ($no_order != NULL) {
-                app(\App\Http\Controllers\ApiController::class)->sendResult($no_order);
-            }
+            // if ($no_order != NULL) {
+            //     app(\App\Http\Controllers\ApiController::class)->sendResult($no_order);
+            // }
 
             return response()->json(['message' => 'Valid', 'valid' => true]);
         } catch (\Exception $e) {

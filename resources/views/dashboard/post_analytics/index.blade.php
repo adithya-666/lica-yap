@@ -83,9 +83,9 @@
                       <th class="text-start min-w-80px" width="10%">Date</th>
                       <th class="text-start" width="15%">Lab No</th>
                       <th class="text-start" width="15%">Medrec</th>
-                      <th class="text-start" width="30%">Name</th>
-                      <th class="text-start" width="20%">Room</th>
-                      <th class="text-lowercase text-left" style="width:5%"><i class="bi bi-info-circle"></i></th>
+                      <th class="text-start" width="25%">Name</th>
+                      <th class="text-start" width="25%">Room</th>
+                      <th class="text-lowercase text-center" style="width:10%"><i class="bi bi-info-circle"></i></th>
                       <th class="text-center" style="width:5%"></th>
                     </tr>
                   </thead>
@@ -198,8 +198,9 @@
                 @endphp
                 <p>Parameter Data &nbsp;&nbsp; {!! $icon !!}</p>
                 <div>
-                  <button class="btn btn-light-primary btn-sm mb-1 test-data-action btnPrintHasil" href="{{url('/printHasilTest/1')}}" type="button" id="btnPrintHasil" data-transaction-id="">Print Hasil Test</button>
-                  <!-- <button class="btn btn-light-primary btn-sm mb-1" id="print-hasil-btn" data-transaction-id="">Print Hasil Tes</button> -->
+                <button class="btn btn-light-success btn-sm mb-1 test-data-action btnSendResult" type="button" id="btn-send-result" data-no-order="-">Send to ERM</button>
+                  <button class="btn btn-light-primary btn-sm mb-1 test-data-action btnPrintHasil" href="{{url('/printHasilTest/1')}}" type="button" id="btnPrintHasil" data-transaction-id="">Print Hasil Test</button> 
+                  {{-- <button class="btn btn-light-primary btn-sm mb-1" id="print-hasil-btn" data-transaction-id="">Print Hasil Tes</button> --}}
                 </div>
               </div>
               <div class="fixTableHead">

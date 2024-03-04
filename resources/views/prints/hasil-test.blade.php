@@ -13,24 +13,18 @@
             /*margin-top: -5em;*/
         }
 
-        #header {
-            /* position: fixed;
-            /* width: 100%;
-            height: 100%; */
-            /* padding: 10px; */
-            margin-top: 0px
-        }
 
         p {
             margin: 0;
             /*display: table-cell;*/
         }
 
-        /* #content {
-            margin-top: 150px;
-            display: inline;
+        #content {
+            /* margin-top: 150px;
+            display: inline; */
+            border-left: black;
         }
-        .spacer
+        /* .spacer
         {
             width: 100%;
             height: 95px;
@@ -49,10 +43,10 @@
             border-bottom: 1px solid black;
         }
 
-        tr,
+        /* tr,
         td {
-            /* border: 1px solid black; */
-        }
+            border-left: 1px solid black;
+        } */
 
         @media print {
             .page-break {
@@ -87,47 +81,38 @@
             /*border-style: solid;
             border-width: 1px;*/
             margin-bottom: 10px;
-            margin-top: -15px
+            margin-top: -25px
         }
     </style>
 </head>
 
 <body>
 
-        <div id="header">
+        <div id="header" >
             <table>
                 <tr>
-                    <td width="15%">
-                        <div>
-                            <img src="{{asset('images/logo-diponegoro.png')}}" style="margin-left: 0px; width: 85%; height: 85%">
-                        </div>
-                    </td>
-                    <td width="67%" style="margin-top:-15px;">
-                        <p style="font-size: 28px;text-align: center;"><b>LABORATORIUM KLINIK</b></p>
-                        <p style="font-size: 30px;text-align: center;"><b>RUMKIT TK II dr. SOEDJONO</b></p>
-                        <p style="font-size: 24px;text-align: center;"><b>MAGELANG</b></p>
+
+                    <td width="67%" style="margin-top:-15px; text-align:left;">
+                        <p style="font-size: 20px;text-align: left;"><b>RUMAH SAKIT MATA "DR. YAP"</b></p>
+                        <p style="font-size: 22px;text-align: left;"><b>Instalasi Laboratorium</b></p>
                         <font size="3">
-                            <p align="center" style="font-size: 16px;">Jl. Urip Sumoharjo 48 Telp. (0293) 363061</p>
-                            <p align="center" style="font-size: 16px;">Fax. (0293) 363366 Magelang</p>
+                            <p align="left" style="font-size: 14px;">Jl. Teuku Cik Di Tiro No.5, Yogyakarta 55223 55223</p>
+                            <p align="left" style="font-size: 14px;">Tlp. (0274) 562052, 550380 Fax. (0274) 517239</p>
                         </font>
                     </td>
                     <td width="18%">
                         <div>
-                            <img src="{{asset('images/logo-hesti-wira-sakti.png')}}" style="margin-left: 0px; width: 100%; height: 100%">
+                            <img src="{{asset('images/logo-yap.png')}}" style="margin-left: 0px; width: 100%; height: 100%">
                         </div>
                     </td>
                 </tr>
             </table>
         </div>
         <center>
-            <h3 style="margin-bottom: -5px">HASIL PEMERIKSAAN LABORATORIUM</h3>
+            <h3 style="margin-bottom: -5px; margin-top : -15px;">HASIL PEMERIKSAAN LABORATORIUM</h3>
         </center>
         <hr style="border: 1px solid black">
-        <table>
-            <tr>
-                <td style="text-align: right;">Cetakan ke : {{$transaction->print}}</td>
-            </tr>
-        </table>
+  
         <!-- <hr style="border: 1px solid black"> -->
         <table>
             <tbody>
@@ -146,9 +131,9 @@
                 <tr>
                     <td style="text-align: left;">Jenis Kelamin </td>
                     @if ($transaction->patient_gender == 'M')
-                    <td style="text-align: left;">: L</td>
+                    <td style="text-align: left;">: Laki-laki</td>
                     @elseif ($transaction->patient_gender == 'F')
-                    <td style="text-align: left;">: P</td>
+                    <td style="text-align: left;">: Perempuan</td>
                     @endif
                     <td style="text-align: left;">Dokter Pengirim </td>
                     <td style="text-align: left;">: {{ $transaction->doctor_name }}</td>
@@ -156,7 +141,7 @@
                 <tr>
                     <td style="text-align: left;">Alamat Pasien</td>
                     <td style="text-align: left;">: {{ $transaction->patient_address }}</td>
-                    <td style="text-align: left;">Asal Ruangan / Kelas </td>
+                    <td style="text-align: left;">Asal Ruangan</td>
                     <td style="text-align: left;">: {{ $transaction->room_name }}</td>
                 </tr>
                 <tr>
@@ -165,14 +150,15 @@
                     <td style="text-align: left;">Status Klaim </td>
                     <td style="text-align: left;">: {{ $transaction->insurance_name }} </td>
                 </tr>
-                <tr>
-                    <td style="text-align: left;">Penanggungjawab</td>
-                    <td style="text-align: left;">: dr. Inge Kusumaningdiyah,Sp.PK </td>
-                </tr>
             </tbody>
         </table>
-        <hr style="border: 1px solid black">
-        <table id="tb_result" width="100%" style="border-bottom: 1px solid black">
+        <table>
+            <tr>
+                <td style="text-align: right;">Cetakan ke : {{$transaction->print}}</td>
+            </tr>
+        </table>
+        {{-- <hr style="border: 1px solid black"> --}}
+        <table id="tb_result" width="100%" style="border : 1px solid black">
             <thead>
                 <tr>
                     <th class="border-bottom" id="content" style="text-align: left; padding-left:15px; width:25%;">JENIS PEMERIKSAAN</th>
@@ -183,18 +169,62 @@
                     <th class="border-bottom" id="content" style="text-align: left; width:15%;">KETERANGAN</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody style="border-right: 1px solid black">
                 <?php
                 $group_test = '';
                 $sub_group = '';
                 $package_name = '';
                 $new_page = 0;
                 $row = 0;
+                $line = 0;
+                $jumlah_test = count($tests);
+                if($jumlah_test <= 14){
+                    $line = 37;
+                }
+                elseif($jumlah_test <=16){
+                    $line = 35;
+                }
+                elseif($jumlah_test <= 23){
+                    $line = 50;
+                }
+                elseif($jumlah_test <= 25){
+                    $line = 47;
+                }
+                elseif($jumlah_test == 26){
+                    $line = 50;
+                }
+                elseif($jumlah_test <= 27){
+                    $line = 50;
+                }
+                elseif($jumlah_test <= 28){
+                    $line = 56;
+                }
+                elseif($jumlah_test <= 31){
+                    $line = 56;
+                }
+                elseif($jumlah_test <= 34){
+                    $line = 65;
+                }
+           
+                elseif ($jumlah_test <= 37) {
+                    $line = 67;
+                }
+                elseif ($jumlah_test <= 42) {
+                    $line = 76;
+                }
+                elseif ($jumlah_test <= 47) {
+                    $line = 75;
+                }
+                elseif ($jumlah_test <= 54) {
+                    $line = 84;
+                }
+            
                 $page = 1; ?>
+             
                 @foreach ($tests as $test)
                 <?php $hitung;
                 ?>
-                @if((($group_test != '') && ($group_test != $test->group_name) && (count($groups[$test->group_name]) + $row > 30)) || ($row > 50))
+                @if($jumlah_test + $row >= $line )
                 <?php $row = 0; ?>
             </tbody>
         </table>
@@ -207,40 +237,31 @@
             </tbody>
         </table>
         <?php $page++; ?>
-        <div id="header" class="page-break">
+        <div id="header" class="page-break" style = "margin-top : -17px" >
             <table>
                 <tr>
-                    <td width="15%">
-                        <div>
-                            <img src="{{asset('images/logo-diponegoro.png')}}" style="margin-left: 0px; width: 85%; height: 85%">
-                        </div>
-                    </td>
-                    <td width="67%" style="margin-top:-15px;">
-                        <p style="font-size: 28px;text-align: center;"><b>LABORATORIUM KLINIK</b></p>
-                        <p style="font-size: 30px;text-align: center;"><b>RUMKIT TK II dr. SOEDJONO</b></p>
-                        <p style="font-size: 24px;text-align: center;"><b>MAGELANG</b></p>
+
+                    <td width="67%" style="margin-top:-15px; text-align:left;">
+                        <p style="font-size: 20px;text-align: left;"><b>RUMAH SAKIT MATA "DR. YAP"</b></p>
+                        <p style="font-size: 22px;text-align: left;"><b>Instalasi Laboratorium</b></p>
                         <font size="3">
-                            <p align="center" style="font-size: 16px;">Jl. Urip Sumoharjo 48 Telp. (0293) 363061</p>
-                            <p align="center" style="font-size: 16px;">Fax. (0293) 363366 Magelang</p>
+                            <p align="left" style="font-size: 14px;">Jl. Teuku Cik Di Tiro No.5, Yogyakarta 55223 55223</p>
+                            <p align="left" style="font-size: 14px;">Tlp. (0274) 562052, 550380 Fax. (0274) 517239</p>
                         </font>
                     </td>
                     <td width="18%">
                         <div>
-                            <img src="{{asset('images/logo-hesti-wira-sakti.png')}}" style="margin-left: 0px; width: 100%; height: 100%">
+                            <img src="{{asset('images/logo-yap.png')}}" style="margin-left: 0px; width: 100%; height: 100%">
                         </div>
                     </td>
                 </tr>
             </table>
         </div>
         <center>
-            <h3 style="margin-bottom: -5px">HASIL PEMERIKSAAN LABORATORIUM</h3>
+            <h3 style="margin-bottom: -5px; margin-top : -15px;">HASIL PEMERIKSAAN LABORATORIUM</h3>
         </center>
         <hr style="border: 1px solid black">
-        <table>
-            <tr>
-                <td style="text-align: right;">Cetakan ke : {{$transaction->print}}</td>
-            </tr>
-        </table>
+  
         <!-- <hr style="border: 1px solid black"> -->
         <table>
             <tbody>
@@ -259,9 +280,9 @@
                 <tr>
                     <td style="text-align: left;">Jenis Kelamin </td>
                     @if ($transaction->patient_gender == 'M')
-                    <td style="text-align: left;">: L</td>
+                    <td style="text-align: left;">: Laki-laki</td>
                     @elseif ($transaction->patient_gender == 'F')
-                    <td style="text-align: left;">: P</td>
+                    <td style="text-align: left;">: Perempuan</td>
                     @endif
                     <td style="text-align: left;">Dokter Pengirim </td>
                     <td style="text-align: left;">: {{ $transaction->doctor_name }}</td>
@@ -269,7 +290,7 @@
                 <tr>
                     <td style="text-align: left;">Alamat Pasien</td>
                     <td style="text-align: left;">: {{ $transaction->patient_address }}</td>
-                    <td style="text-align: left;">Asal Ruangan / Kelas </td>
+                    <td style="text-align: left;">Asal Ruangan</td>
                     <td style="text-align: left;">: {{ $transaction->room_name }}</td>
                 </tr>
                 <tr>
@@ -278,14 +299,15 @@
                     <td style="text-align: left;">Status Klaim </td>
                     <td style="text-align: left;">: {{ $transaction->insurance_name }} </td>
                 </tr>
-                <tr>
-                    <td style="text-align: left;">Penanggungjawab</td>
-                    <td style="text-align: left;">: dr. Inge Kusumaningdiyah,Sp.PK </td>
-                </tr>
             </tbody>
         </table>
+        <table>
+            <tr>
+                <td style="text-align: right;">Cetakan ke : {{$transaction->print}}</td>
+            </tr>
+        </table>
         <hr style="border: 1px solid black">
-        <table id="tb_result" width="100%" style="border-bottom: 1px solid black;">
+        <table id="tb_result"  style="border : 1px solid black; width: 112%;">
             <tr>
                 <th class="border-bottom" id="content" style="text-align: left; padding-left:15px; width:25%;">JENIS PEMERIKSAAN</th>
                 <th class="border-bottom" id="content" style="width:5%;"></th>
@@ -300,8 +322,8 @@
             @if (($group_test == '')||($group_test != $test->group_name))
             <?php $group_test = $test->group_name; ?>
 
-            <tr id="content">
-                <td style="padding-left:15px; padding-bottom: 5px;"><span style="font-size:10px; font-style: italic; font-weight: bold">{{ $test->group_name }}</span></td>
+            <tr id="content" style="border-left: red !important;">
+                <td style="padding-left:15px; padding-bottom: 5px; padding-top: 1rem"><span style="font-size:10px; font-style: italic; font-weight: bold">{{ $test->group_name }}</span></td>
                 <td></td>
                 <td></td>
                 <td></td>
@@ -351,9 +373,9 @@
 
                 <!-- td test name -->
                 @if ($sub_group == '')
-                <td id="content" valign="top" style="padding-left:35px; padding-bottom: 1px;">{{ $test->test_name }}</td>
+                <td id="content" valign="center" style="padding-left:35px; padding-bottom: 1px;">{{ $test->test_name }}</td>
                 @else
-                <td id="content" valign="top" style="padding-left:35px; padding-bottom: 1px;">{{ $test->test_name }}</td>
+                <td id="content" valign="center" style="padding-left:35px; padding-bottom: 1px;">{{ $test->test_name }}</td>
                 @endif
                 <!-- end td test name -->
 
@@ -382,13 +404,13 @@
                 <!-- td result -->
                 @if (strlen($test->global_result) > 15)
                 @if ($test->normal_value == '' && $test->unit == '')
-                <td colspan="4" id="content" style="text-align: left; padding-bottom: 3px;">{!! $result !!}</td>
+                <td colspan="4" id="content" style="text-align: left; padding-bottom: 1px; font-size: 15x;">{!! $result !!}</td>
                 @else
-                <td id="content" style="text-align: right; padding-bottom: 3px;">{!! $result !!}</td>
+                <td id="content" style="text-align: left; padding-bottom: 1px;">{!! $result !!}</td>
                 @endif
                 <?php $row = $row + 4; ?>
                 @else
-                <td id="content" style="text-align: left; padding-bottom: 3px;">{!! $result !!}</td>
+                <td id="content" style="text-align: left; padding-bottom: 1px;">{!! $result !!}</td>
                 @endif
                 <!-- end td result -->
 
@@ -550,18 +572,18 @@
         <table>
             <tbody>
                 <tr>
-                    <td style="text-align: left; font-size: 10px; width: 19%;"> Jam Pengambilan Sample </td>
-                    <td style="text-align: left; font-size: 10px; width: 20%;"> : <?= date('d/m/Y H:i', strtotime($transaction->checkin_time)); ?></td>
+                    <td style="text-align: left; font-size: 10px; width: 19%;"><b>Keterangan :</b></td>
+                    <td style="text-align: left; font-size: 10px; width: 20%;"> </td>
                     <td style="text-align: left; width: 25%;"> </td>
                     <td style="text-align: left; width: 25%;"> </td>
                 </tr>
                 <tr>
-                    <td style="text-align: left; font-size: 10px; width: 19%;"> Jam Cetak Hasil </td>
-                    <td style="text-align: left; font-size: 10px; width: 20%;"> : <?= date('d/m/Y H:i', strtotime($print_time)); ?></td>
-                    <td style="text-align: left; width: 25%;"> </td>
-                    <td style="text-align: left; width: 25%;"> </td>
+   
+                    <td style="text-align: left; font-size: 10px; width: 50%;"> Di Cetak tanggal  <?= date('d/m/Y H:i', strtotime($print_time)); ?> oleh <?= Auth::user()->username ?>
+                        Dokumen ini telah divalidasi dan dicetak otomatis dari sistem</td>
+
                 </tr>
-                <tr>
+                {{-- <tr>
                     <td style="text-align: left; font-size: 10px; width: 19%;"> Printed by </td>
                     <td style="text-align: left; font-size: 10px; width: 20%;"> : {{ Auth::user()->name }}</td>
                     <td style="text-align: left; width: 25%;"> </td>
@@ -572,23 +594,28 @@
                     <td style="text-align: left; font-size: 12px; width: 25%;"> </td>
                     <td style="text-align: left; width: 25%;"> </td>
                     <td style="text-align: left; width: 25%;"> </td>
-                </tr>
+                </tr>  --}}
             </tbody>
         </table>
 
         <table style="position: fixed;">
             <tbody>
                 <tr>
-                    <td width="80%" style="text-align: right;"> </td>
-                    <td width="20%" style="text-align: center;">Magelang, <?= date('d/m/Y', strtotime($print_time)); ?> </td>
+                    <td width="70%" style="text-align: right;"> </td>
+                    <td width="30%" style="text-align: center;">Kepala Instalasi Laboratorium,  </td>
                 </tr>
                 <tr>
-                    <td width="80%" style="text-align: right;"> </td>
-                    <td width="20%" style="text-align: center;">Validator,<br><br><br><br></td>
+                    <td width="70%" style="text-align: right;"> </td>
+                    <td width="30%" style="text-align: center;">RS YAP "Dr.YAP"<br>
+                        <img src="{{asset('images/barcode.jpeg')}}" style="margin-left: 0px; width: 35%; height: 35%">
+                    </td>
                 </tr>
                 <tr>
-                    <td width="80%" style="text-align: right;"> </td>
-                    <td width="20%" style="text-align: center;">{{ Auth::user()->name }}</td>
+                    <td width="70%" style="text-align: right;"> </td> 
+                    <td width="30%" style="text-align: center;">( dr. Brilliana Nur R., MSc., Sp.PK )
+                         <br>
+                         SIP No. 503/1607/dr. Sp/X/2019</td>
+                {{-- <td width="20%" style="text-align: center;"</td>  --}}
                 </tr>
 
             </tbody>

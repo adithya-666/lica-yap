@@ -145,9 +145,9 @@
             <tr>
                 <td style="text-align: left;">Jenis Kelamin </td>
                 @if ($transaction->patient_gender == 'M')
-                <td style="text-align: left;">: L</td>
+                <td style="text-align: left;">: Laki-laki</td>
                 @elseif ($transaction->patient_gender == 'F')
-                <td style="text-align: left;">: P</td>
+                <td style="text-align: left;">: Perempuan</td>
                 @endif
                 <td style="text-align: left;">Dokter Pengirim </td>
                 <td style="text-align: left;">: {{ $transaction->doctor_name }}</td>
@@ -258,9 +258,9 @@
             <tr>
                 <td style="text-align: left;">Jenis Kelamin </td>
                 @if ($transaction->patient_gender == 'M')
-                <td style="text-align: left;">: L</td>
+                <td style="text-align: left;">: Laki-laki</td>
                 @elseif ($transaction->patient_gender == 'F')
-                <td style="text-align: left;">: P</td>
+                <td style="text-align: left;">: Perempuan</td>
                 @endif
                 <td style="text-align: left;">Dokter Pengirim </td>
                 <td style="text-align: left;">: {{ $transaction->doctor_name }}</td>
@@ -587,7 +587,8 @@
             </tr>
             <tr>
                 <td width="80%" style="text-align: right;"> </td>
-                <td width="20%" style="text-align: center;">{{ Auth::user()->name }}</td>
+                <td width="20%" style="text-align: center;">dr. Inge Kusumaningdiyah, Sp.PK</td>
+               <!-- <td width="20%" style="text-align: center;">{{ Auth::user()->name }}</td> -->
             </tr>
 
         </tbody>

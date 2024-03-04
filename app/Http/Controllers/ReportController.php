@@ -8,6 +8,13 @@ use DB;
 use Illuminate\Support\Carbon;
 use Auth;
 use PDF;
+use App\FinishTransaction;
+use App\FinishTransactionTest;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\TestDetailExport;
+use App\Exports\TATExport;
+use App\Exports\ExportHistoryPatient;
+use App\Exports\SupportActivitiesExport;
 
 class ReportController extends Controller
 {
@@ -24,10 +31,30 @@ class ReportController extends Controller
         }
     }
 
-    public function selectOptionsPatient()
+    public function selectOptionsInsurance(Request $request)
     {
         try {
-            $query = DB::table('patients')->selectRaw('patients.id as patient_id, patients.name as patient_name');
+            $search = $request->input('query');
+            // dd($search);
+    
+            $query = DB::table('insurances')->selectRaw('insurances.id as insurance_id, insurances.name as insurance_name')
+            ->where('insurances.name', 'LIKE', '%' . $search . '%'); 
+            $data = $query->get();
+
+
+            
+
+            return response()->json($data);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+    public function selectOptionsPatient(Request $request)
+    {
+        try {
+            $query = DB::table('patients')->selectRaw('patients.id as patient_id, patients.name as patient_name ,  patients.medrec as patient_medrec');
+            $query = $query->where('name', 'LIKE', '%' . $request->input('query') . '%');
+           
             $data = $query->get();
 
             return response()->json($data);
@@ -36,22 +63,25 @@ class ReportController extends Controller
         }
     }
 
-    public function selectOptionsInsurance()
-    {
-        try {
-            $query = DB::table('insurances')->selectRaw('insurances.id as insurance_id, insurances.name as insurance_name');
-            $data = $query->get();
 
-            return response()->json($data);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
-    }
 
     public function selectOptionsDoctor()
     {
         try {
             $query = DB::table('doctors')->selectRaw('doctors.id as doctor_id, doctors.name as doctor_name');
+            $data = $query->get();
+
+            return response()->json($data);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function selectOptionsTest(Request $request)
+    {
+        try {
+            $query = DB::table('tests')->selectRaw('tests.id as test_id, tests.name as test_name');
+            $query = $query->where('name', 'LIKE', '%' . $request->input('query') . '%');
             $data = $query->get();
 
             return response()->json($data);
@@ -352,11 +382,12 @@ class ReportController extends Controller
             $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
         }
 
-        $model = DB::table('finish_transactions')->selectRaw('finish_transactions.*, finish_transaction_tests.group_name, finish_transaction_tests.draw_time, finish_transaction_tests.validate_time');
+        $model = DB::table('finish_transactions')->selectRaw('finish_transactions.*, finish_transaction_tests.group_name, finish_transaction_tests.draw_time, finish_transaction_tests.validate_time, finish_transaction_tests.verify_time,  MIN(log_print.printed_at) as print_time');
         $model->leftJoin('finish_transaction_tests', 'finish_transactions.id', '=', 'finish_transaction_tests.finish_transaction_id');
+        $model->leftJoin('log_print', 'finish_transactions.id', '=', 'log_print.finish_transaction_id');
         $model->where('finish_transactions.created_time', '>=', $from);
         $model->where('finish_transactions.created_time', '<=', $to);
-        $model->orderBy('finish_transactions.created_time', 'desc');
+        $model->orderBy('finish_transactions.created_time', 'asc');
         $model->groupBy('finish_transactions.id');
 
         return DataTables::of($model)
@@ -376,11 +407,12 @@ class ReportController extends Controller
             $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
         }
 
-        $query = DB::table('finish_transactions')->selectRaw('finish_transactions.*, finish_transaction_tests.group_name, finish_transaction_tests.draw_time, finish_transaction_tests.validate_time');
+        $query = DB::table('finish_transactions')->selectRaw('finish_transactions.*, finish_transaction_tests.group_name, finish_transaction_tests.draw_time, finish_transaction_tests.validate_time, finish_transaction_tests.verify_time,  MIN(log_print.printed_at) as print_time');
         $query->leftJoin('finish_transaction_tests', 'finish_transactions.id', '=', 'finish_transaction_tests.finish_transaction_id');
+        $query->leftJoin('log_print', 'finish_transactions.id', '=', 'log_print.finish_transaction_id');
         $query->where('finish_transactions.created_time', '>=', $from);
         $query->where('finish_transactions.created_time', '<=', $to);
-        $query->orderBy('finish_transactions.created_time', 'desc');
+        $query->orderBy('finish_transactions.created_time', 'asc');
         $query->groupBy('finish_transactions.id');
 
         $data["tatData"] = $query->get();
@@ -393,7 +425,44 @@ class ReportController extends Controller
             $data["endDate"] = '-';
         }
 
+        // echo '<pre>';
+        // print_r($data);
+        // die;
+
         return view('dashboard.report.report_tat.print', $data);
+    }
+    public function TATExcel($startDate = null, $endDate = null)
+    {
+        // if the startDate and the endDate not set, the query will be only for today's transactions
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+
+        $query = DB::table('finish_transactions')->selectRaw('finish_transactions.*, finish_transaction_tests.group_name, finish_transaction_tests.draw_time, finish_transaction_tests.validate_time, finish_transaction_tests.verify_time,  MIN(log_print.printed_at) as print_time');
+        $query->leftJoin('finish_transaction_tests', 'finish_transactions.id', '=', 'finish_transaction_tests.finish_transaction_id');
+        $query->leftJoin('log_print', 'finish_transactions.id', '=', 'log_print.finish_transaction_id');
+        $query->where('finish_transactions.created_time', '>=', $from);
+        $query->where('finish_transactions.created_time', '<=', $to);
+        $query->orderBy('finish_transactions.created_time', 'asc');
+        $query->groupBy('finish_transactions.id');
+
+        $data["tatData"] = $query->get();
+
+        if ($startDate != null && $endDate != null) {
+            $data["startDate"] = date('d/m/Y', strtotime($startDate));
+            $data["endDate"] = date('d/m/Y', strtotime($endDate));
+        } else {
+            $data["startDate"] = '-';
+            $data["endDate"] = '-';
+        }
+
+        $fileName = 'TAT.xlsx'; // Nama file Excel yang akan diunduh
+    
+        return Excel::download(new TATExport($data), $fileName);
     }
 
     public function TATGroupPrint($startDate = null, $endDate = null)
@@ -1089,6 +1158,547 @@ class ReportController extends Controller
         return view('dashboard.report.report_test.print', $data);
     }
 
+      //===============================================================================================
+    // TEST DETAIL REPORT
+    //===============================================================================================
+
+    public function testDetailReport()
+    {
+        $data['title'] = 'Test Detail Report';
+        return view('dashboard.report.report_test_detail.index', $data);
+    }
+
+    public function testDetailDatatable($startDate = null, $endDate = null, $test_id = null)
+    {
+        
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+        // dd($test_id);
+        $test_ids = [$test_id];
+        $model = FinishTransaction::selectRaw('finish_transactions.id');
+        if ($test_ids != null && $test_ids != ["null"] && $test_ids != [0]) {
+            $model->join('finish_transaction_tests', 'finish_transaction_tests.finish_transaction_id', '=', 'finish_transactions.id')
+                ->whereIn('test_id', $test_ids);
+        }
+        
+
+        $model->where('created_time', '>=', $from);
+        $model->where('created_time', '<=', $to);
+        $finishTransactionIds = $model->get();
+        $ftIds = [];
+        foreach($finishTransactionIds as $key => $value) {
+            $ftIds[] = $value->id;
+        }
+       
+        $finishTransactionTestModel = FinishTransactionTest::selectRaw('finish_transaction_tests.finish_transaction_id, count(finish_transaction_tests.finish_transaction_id)')
+            ->whereIn('finish_transaction_tests.finish_transaction_id', $ftIds)
+            ->groupBy('finish_transaction_tests.finish_transaction_id');
+        
+            if ($test_ids != null && $test_ids != ["null"] && $test_ids != [0]) {
+                $finishTransactionTestModel = $finishTransactionTestModel->whereIn('test_id', $test_ids);
+            }
+            
+        
+        $newFtIds = [];
+        foreach($finishTransactionTestModel->get() as $key => $value) {
+            $newFtIds[] = $value->finish_transaction_id;
+        }
+       
+        $finishTransactionModel = FinishTransaction::whereIn('id', $newFtIds);
+      
+        return DataTables::of($finishTransactionModel)
+        ->addIndexColumn()
+        ->addColumn('test_names', function ($data) use ($test_ids) {
+            $ftt = DB::table('finish_transaction_tests')
+                ->select('test_name')
+                ->where('finish_transaction_id', $data->id);
+    
+            if (!empty($test_ids) && $test_ids != [0]) {
+                $ftt->whereIn('test_id', $test_ids);
+            }
+    
+            $ftt = $ftt->get();
+    
+            $names = '';
+            if (!empty($ftt)) {
+                foreach ($ftt as $key => $value) {
+                    $names .= $value->test_name;
+                    if ($key < count($ftt) - 1) {
+                        $names .= ', ';
+                    }
+                }
+            } else {
+                $names = 'All Tests';
+            }
+    
+            return $names;
+        })
+      
+        ->addColumn('test_global_results', function ($data) use ($test_ids) {
+            if (!empty($test_ids) && $test_ids != [0]) {
+                $ftt = DB::table('finish_transaction_tests')
+                    ->select( 'global_result')
+                    ->where('finish_transaction_id', $data->id)
+                    ->whereIn('test_id', $test_ids)
+                    ->get();
+                    $global_result = '';
+                    foreach ($ftt as $key => $value) {
+                        $global_result .=  $value->global_result;
+                        if ($key < count($ftt) - 1) {
+                            $global_result .= '<br>';
+                        }
+                    }
+                    
+            return $global_result;
+            } else {
+                $ftt = DB::table('finish_transaction_tests')
+                    ->select('test_name', 'global_result', 'unit')
+                    ->where('finish_transaction_id', $data->id)
+                    ->get();
+                    $global_result = '';
+                    foreach ($ftt as $key => $value) {
+                        $global_result .= $value->test_name . ": " . $value->global_result . " " . $value->unit;
+                        if ($key < count($ftt) - 1) {
+                            $global_result .= '<br>';
+                        }
+                    }
+                    return $global_result;
+            }    
+        })
+        ->escapeColumns([])
+        ->make(true);
+
+     
+    }
+    public function printTestDetail($startDate = null, $endDate = null, $test_id = null) 
+    {
+
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+        
+        $query_test = DB::table('finish_transactions')->select('finish_transactions.id');
+        if ($test_id != null && $test_id != "null" && $test_id != 0) {
+            $test_ids = explode(',', $test_id); // Ubah menjadi array
+            $query_test->join('finish_transaction_tests as ftt1', 'ftt1.finish_transaction_id', '=', 'finish_transactions.id')
+                ->whereIn('ftt1.test_id', $test_ids); // Gunakan $test_ids yang merupakan array
+        }
+        
+        $query_test->where('created_time', '>=', $from);
+        $query_test->where('created_time', '<=', $to);
+        $id["id"] = $query_test->get();
+        $jumlah = count($id["id"]);
+        
+        $testDetails = [];
+        for ($i = 0; $i < $jumlah; $i++) {
+            if (!empty($test_ids) && $test_ids != [0]) {
+                $model = DB::table('finish_transactions')->selectRaw('finish_transactions.*, GROUP_CONCAT(ftt2.test_name SEPARATOR ", ") AS test_names, GROUP_CONCAT(ftt2.global_result SEPARATOR ", ") AS global_results');
+         
+            } else{
+                $model = DB::table('finish_transactions')->selectRaw('finish_transactions.*, GROUP_CONCAT(ftt2.test_name SEPARATOR ", ") AS test_names, GROUP_CONCAT(CONCAT(ftt2.test_name, " : ", ftt2.global_result, " ", ftt2.unit) SEPARATOR ", ") AS global_results');
+            }
+            if ($test_id != null && $test_id != "null" && $test_id != 0) {
+                $model->join('finish_transaction_tests as ftt2', 'ftt2.finish_transaction_id', '=', 'finish_transactions.id')
+                    ->whereIn('ftt2.test_id', $test_ids); // Gunakan $test_ids yang merupakan array
+            } else {
+                $model->join('finish_transaction_tests as ftt2', 'ftt2.finish_transaction_id', '=', 'finish_transactions.id');
+            }
+            $model->where('finish_transactions.id', $id["id"][$i]->id);
+            $model->where('created_time', '>=', $from);
+            $model->where('created_time', '<=', $to);
+            $model->groupBy('finish_transactions.id');
+        
+            $data['testDetail'][] = $model->get();
+        }
+        
+        if ($startDate != null && $endDate != null) {
+            $tanggal["startDate"] = date('d/m/Y', strtotime($startDate));
+            $tanggal["endDate"] = date('d/m/Y', strtotime($endDate));
+        } else {
+            $tanggal["startDate"] = '-';
+            $tanggal["endDate"] = '-';
+        }
+        
+        
+        
+
+            return view('dashboard.report.report_test_detail.print', compact('data'), $tanggal);
+    }
+
+
+    public function exportExcelTestDetail($startDate = null, $endDate = null, $test_id = null)
+    {
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+
+        $query_test = FinishTransaction::query()->select('finish_transactions.id');
+        if ($test_id != null && $test_id != "null" && $test_id != 0) {
+            $test_ids = explode(',', $test_id); // Ubah menjadi array
+            $query_test->join('finish_transaction_tests as ftt1', 'ftt1.finish_transaction_id', '=', 'finish_transactions.id')
+                ->whereIn('ftt1.test_id', $test_ids); // Gunakan $test_ids yang merupakan array
+        }
+
+        $query_test->where('created_time', '>=', $from);
+        $query_test->where('created_time', '<=', $to);
+        $id = $query_test->pluck('id')->toArray();
+        $jumlah = count($id);
+
+        $testDetails = [];
+        for ($i = 0; $i < $jumlah; $i++) {
+            $model = FinishTransaction::query()->selectRaw('finish_transactions.*, GROUP_CONCAT(ftt2.test_name SEPARATOR ", ") AS test_names, GROUP_CONCAT(ftt2.global_result SEPARATOR ", ") AS global_results');
+            if ($test_id != null && $test_id != "null" && $test_id != 0) {
+                $model->join('finish_transaction_tests as ftt2', 'ftt2.finish_transaction_id', '=', 'finish_transactions.id')
+                    ->whereIn('ftt2.test_id', $test_ids); // Gunakan $test_ids yang merupakan array
+            } else {
+                $model->join('finish_transaction_tests as ftt2', 'ftt2.finish_transaction_id', '=', 'finish_transactions.id');
+            }
+            $model->where('finish_transactions.id', $id[$i]);
+            $model->where('created_time', '>=', $from);
+            $model->where('created_time', '<=', $to);
+            $model->groupBy('finish_transactions.id');
+
+            $testDetails[] = $model->get();
+        }
+ 
+
+        $data = collect($testDetails)->flatten();
+
+        if ($startDate != null && $endDate != null) {
+            $tanggalStart = date('d/m/Y', strtotime($startDate));
+            $tanggalEnd = date('d/m/Y', strtotime($endDate));
+        } else {
+            $tanggalStart = '-';
+            $tanggalEnd = '-';
+        }
+
+        // dd($data);
+
+        $fileName = 'TestDetailReport.xlsx'; // Nama file Excel yang akan diunduh
+
+        return Excel::download(new TestDetailExport($data, $tanggalStart, $tanggalEnd), $fileName);
+
+  
+
+    }
+
+         //===============================================================================================
+    // HISTORY PATIENT REPORT
+    //===============================================================================================
+
+    public function historyPatientReport()
+    {
+        $data['title'] = 'History Patient Report';
+        return view('dashboard.report.report_history_patient.index', $data);
+    }
+
+    public function historyPatientDatatable($startDate = null, $endDate = null, $test_id = null, $patient_id = null)
+    {
+        
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+        // dd($test_id);
+        $test_ids = [$test_id];
+        $model = FinishTransaction::selectRaw('finish_transactions.id');
+        if ($test_ids != null && $test_ids != ["null"] && $test_ids != [0]) {
+            $model->join('finish_transaction_tests', 'finish_transaction_tests.finish_transaction_id', '=', 'finish_transactions.id')
+                ->whereIn('test_id', $test_ids);
+        }
+        if ($patient_id != null && $patient_id != "null" && $patient_id != 0) {
+            $model->where('patient_id', $patient_id);
+        }
+        
+
+        $model->where('created_time', '>=', $from);
+        $model->where('created_time', '<=', $to);
+        $finishTransactionIds = $model->get();
+        $ftIds = [];
+        foreach($finishTransactionIds as $key => $value) {
+            $ftIds[] = $value->id;
+        }
+       
+        $finishTransactionTestModel = FinishTransactionTest::selectRaw('finish_transaction_tests.finish_transaction_id, count(finish_transaction_tests.finish_transaction_id)')
+             ->join('finish_transactions', 'finish_transaction_tests.finish_transaction_id', '=', 'finish_transactions.id')
+            ->whereIn('finish_transaction_tests.finish_transaction_id', $ftIds)
+            ->groupBy('finish_transaction_tests.finish_transaction_id');
+        
+            if ($test_ids != null && $test_ids != ["null"] && $test_ids != [0]) {
+                $finishTransactionTestModel = $finishTransactionTestModel->whereIn('test_id', $test_ids);
+            }
+            if ($patient_id != null && $patient_id != "null" && $patient_id != 0) {
+                $finishTransactionTestModel = $finishTransactionTestModel->where('patient_id', $patient_id);
+            }
+            
+        
+        $newFtIds = [];
+        foreach($finishTransactionTestModel->get() as $key => $value) {
+            $newFtIds[] = $value->finish_transaction_id;
+        }
+       
+        $finishTransactionModel = FinishTransaction::whereIn('id', $newFtIds);
+      
+        return DataTables::of($finishTransactionModel)
+        ->addIndexColumn()
+        ->addColumn('test_names', function ($data) use ($test_ids) {
+            $ftt = DB::table('finish_transaction_tests')
+                ->select('test_name')
+                ->where('finish_transaction_id', $data->id);
+    
+            if (!empty($test_ids) && $test_ids != [0]) {
+                $ftt->whereIn('test_id', $test_ids);
+            }
+    
+            $ftt = $ftt->get();
+    
+            $names = '';
+            if (!empty($ftt)) {
+                foreach ($ftt as $key => $value) {
+                    $names .= $value->test_name;
+                    if ($key < count($ftt) - 1) {
+                        $names .= ', ';
+                    }
+                }
+            } else {
+                $names = 'All Tests';
+            }
+    
+            return $names;
+        })
+      
+        ->addColumn('test_global_results', function ($data) use ($test_ids) {
+            if (!empty($test_ids) && $test_ids != [0]) {
+                $ftt = DB::table('finish_transaction_tests')
+                    ->select( 'global_result')
+                    ->where('finish_transaction_id', $data->id)
+                    ->whereIn('test_id', $test_ids)
+                    ->get();
+                    $global_result = '';
+                    foreach ($ftt as $key => $value) {
+                        $global_result .=  $value->global_result;
+                        if ($key < count($ftt) - 1) {
+                            $global_result .= '<br>';
+                        }
+                    }
+                    
+            return $global_result;
+            } else {
+                $ftt = DB::table('finish_transaction_tests')
+                    ->select('test_name', 'global_result', 'unit')
+                    ->where('finish_transaction_id', $data->id)
+                    ->get();
+                    $global_result = '';
+                    foreach ($ftt as $key => $value) {
+                        $global_result .= $value->test_name . ": " . $value->global_result . " " . $value->unit;
+                        if ($key < count($ftt) - 1) {
+                            $global_result .= '<br>';
+                        }
+                    }
+                    return $global_result;
+            }    
+        })
+        ->escapeColumns([])
+        ->make(true);
+
+     
+    }
+    public function historyPatientPrint($startDate = null, $endDate = null, $test_id = null, $patient_id = null) 
+    {
+
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+        
+        $query_test = DB::table('finish_transactions')->select('finish_transactions.id');
+        if ($test_id != null && $test_id != "null" && $test_id != 0) {
+            $test_ids = explode(',', $test_id); // Ubah menjadi array
+            $query_test->join('finish_transaction_tests as ftt1', 'ftt1.finish_transaction_id', '=', 'finish_transactions.id')
+                ->whereIn('ftt1.test_id', $test_ids); // Gunakan $test_ids yang merupakan array
+        }
+        if ($patient_id != null && $patient_id != "null" && $patient_id != 0) {
+            $query_test->where('finish_transactions.patient_id', $patient_id); // Gunakan $test_ids yang merupakan array
+        }
+        
+        $query_test->where('created_time', '>=', $from);
+        $query_test->where('created_time', '<=', $to);
+        $id["id"] = $query_test->get();
+        $jumlah = count($id["id"]);
+        
+        $testDetails = [];
+        for ($i = 0; $i < $jumlah; $i++) {
+            if (!empty($test_ids) && $test_ids != [0]) {
+                $model = DB::table('finish_transactions')->selectRaw('finish_transactions.*, GROUP_CONCAT(ftt2.test_name SEPARATOR ", ") AS test_names, GROUP_CONCAT(ftt2.global_result SEPARATOR ", ") AS global_results');
+         
+            } else{
+                $model = DB::table('finish_transactions')->selectRaw('finish_transactions.*, GROUP_CONCAT(ftt2.test_name SEPARATOR ", ") AS test_names, GROUP_CONCAT(CONCAT(ftt2.test_name, " : ", ftt2.global_result, " ", ftt2.unit) SEPARATOR ", ") AS global_results');
+            }
+            if ($test_id != null && $test_id != "null" && $test_id != 0) {
+                $model->join('finish_transaction_tests as ftt2', 'ftt2.finish_transaction_id', '=', 'finish_transactions.id')
+                    ->whereIn('ftt2.test_id', $test_ids); // Gunakan $test_ids yang merupakan array
+            } else {
+                $model->join('finish_transaction_tests as ftt2', 'ftt2.finish_transaction_id', '=', 'finish_transactions.id');
+            }
+            $model->where('finish_transactions.id', $id["id"][$i]->id);
+            $model->where('created_time', '>=', $from);
+            $model->where('created_time', '<=', $to);
+         
+            $model->groupBy('finish_transactions.id');
+       
+            $testDetail['testDetail'][] = $model->get();
+        }
+        $dataCollect = collect($testDetail)->flatten();
+
+        $data['historyPatient'] = $dataCollect;
+        
+        if ($startDate != null && $endDate != null) {
+            $data["startDate"] = date('d/m/Y', strtotime($startDate));
+            $data["endDate"] = date('d/m/Y', strtotime($endDate));
+        } else {
+            $data["startDate"] = '-';
+            $data["endDate"] = '-';
+        }
+
+        if ($patient_id != null && $patient_id != 'null' && $patient_id != 0) {
+          $patient = DB::table('patients')
+                    ->select('name')
+                    ->where('id', $patient_id)
+                    ->first();
+            $data['patient_name'] = $patient->name;
+        } else {
+            $data['patient_name'] = '-';
+        }
+
+
+        if ($test_id != null && $test_id != 'null' && $test_id != 0) {
+          $test = DB::table('tests')
+                    ->select('name')
+                    ->where('id', $test_id)
+                    ->first();
+            $data['test_name'] = $test->name;
+        } else {
+            $data['test_name'] = '-';
+        }
+        
+      
+
+        // echo '<pre>';
+        // print_r($data);
+        // die;
+        
+      
+            return view('dashboard.report.report_history_patient.print',  $data);
+    }
+
+
+    public function historyPatientExcel($startDate = null, $endDate = null, $test_id = null, $patient_id = null)
+    {
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+        
+        $query_test = DB::table('finish_transactions')->select('finish_transactions.id');
+        if ($test_id != null && $test_id != "null" && $test_id != 0) {
+            $test_ids = explode(',', $test_id); // Ubah menjadi array
+            $query_test->join('finish_transaction_tests as ftt1', 'ftt1.finish_transaction_id', '=', 'finish_transactions.id')
+                ->whereIn('ftt1.test_id', $test_ids); // Gunakan $test_ids yang merupakan array
+        }
+        if ($patient_id != null && $patient_id != "null" && $patient_id != 0) {
+            $query_test->where('finish_transactions.patient_id', $patient_id); // Gunakan $test_ids yang merupakan array
+        }
+        
+        $query_test->where('created_time', '>=', $from);
+        $query_test->where('created_time', '<=', $to);
+        $id["id"] = $query_test->get();
+        $jumlah = count($id["id"]);
+        
+        $testDetails = [];
+        for ($i = 0; $i < $jumlah; $i++) {
+            if (!empty($test_ids) && $test_ids != [0]) {
+                $model = DB::table('finish_transactions')->selectRaw('finish_transactions.*, GROUP_CONCAT(ftt2.test_name SEPARATOR ", ") AS test_names, GROUP_CONCAT(ftt2.global_result SEPARATOR ", ") AS global_results');
+         
+            } else{
+                $model = DB::table('finish_transactions')->selectRaw('finish_transactions.*, GROUP_CONCAT(ftt2.test_name SEPARATOR ", ") AS test_names, GROUP_CONCAT(CONCAT(ftt2.test_name, " : ", ftt2.global_result, " ", ftt2.unit) SEPARATOR ", ") AS global_results');
+            }
+            if ($test_id != null && $test_id != "null" && $test_id != 0) {
+                $model->join('finish_transaction_tests as ftt2', 'ftt2.finish_transaction_id', '=', 'finish_transactions.id')
+                    ->whereIn('ftt2.test_id', $test_ids); // Gunakan $test_ids yang merupakan array
+            } else {
+                $model->join('finish_transaction_tests as ftt2', 'ftt2.finish_transaction_id', '=', 'finish_transactions.id');
+            }
+            $model->where('finish_transactions.id', $id["id"][$i]->id);
+            $model->where('created_time', '>=', $from);
+            $model->where('created_time', '<=', $to);
+         
+            $model->groupBy('finish_transactions.id');
+       
+            $testDetail['testDetail'][] = $model->get();
+        }
+        $dataCollect = collect($testDetail)->flatten();
+
+        $data['historyPatient'] = $dataCollect;
+        
+        if ($startDate != null && $endDate != null) {
+            $data["startDate"] = date('d/m/Y', strtotime($startDate));
+            $data["endDate"] = date('d/m/Y', strtotime($endDate));
+        } else {
+            $data["startDate"] = '-';
+            $data["endDate"] = '-';
+        }
+
+        if ($patient_id != null && $patient_id != 'null' && $patient_id != 0) {
+          $patient = DB::table('patients')
+                    ->select('name')
+                    ->where('id', $patient_id)
+                    ->first();
+            $data['patient_name'] = $patient->name;
+        } else {
+            $data['patient_name'] = '-';
+        }
+
+
+        if ($test_id != null && $test_id != 'null' && $test_id != 0) {
+          $test = DB::table('tests')
+                    ->select('name')
+                    ->where('id', $test_id)
+                    ->first();
+            $data['test_name'] = $test->name;
+        } else {
+            $data['test_name'] = '-';
+        }
+        // dd($data);
+
+        $fileName = 'History Patient Report.xlsx'; // Nama file Excel yang akan diunduh
+
+        return Excel::download(new ExportHistoryPatient($data), $fileName);
+
+  
+
+    }
     //===============================================================================================
     // SARS Cov-2 ANTIGENT REPORT
     //===============================================================================================
@@ -1778,6 +2388,205 @@ class ReportController extends Controller
 
         return view('dashboard.report.report_specimen.print', $data);
     }
+
+
+    //===============================================================================================
+    // SUPPORT ACTIVITIES LAB REPORT
+    //===============================================================================================
+    public function SupportActivitiesReport()
+    {
+        $data['title'] = 'Support Activities LAB Report';
+        return view('dashboard.report.report_support_activities.index', $data);
+    }
+
+    public function SupportActivitiesDatatable($startDate = null, $endDate = null, $insurance_id = null)
+    {
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+
+       
+        
+        $query_package = DB::table('finish_transactions')
+        ->select('finish_transactions.*', 'finish_transaction_tests.package_id', 'finish_transaction_tests.package_name')
+            ->leftjoin('finish_transaction_tests', 'finish_transaction_tests.finish_transaction_id', 'finish_transactions.id')
+            ->where('created_time', '>=', $from)
+            ->where('created_time', '<=', $to)
+            ->where('finish_transaction_tests.package_id', '!=', null);
+            if($insurance_id != null && $insurance_id != 'null'){
+                $query_package->where('finish_transactions.insurance_id', '=', $insurance_id);
+        }
+            $result_package = $query_package->orderBy('finish_transactions.created_time', 'asc')
+            ->groupBy('finish_transactions.id')
+            ->get()
+            ->toArray();
+
+
+        $query_single = DB::table('finish_transactions')
+        ->select('finish_transactions.*', 'finish_transactions.insurance_id'  ,'finish_transaction_tests.package_id', 'finish_transaction_tests.test_name')
+        ->leftjoin('finish_transaction_tests', 'finish_transaction_tests.finish_transaction_id', 'finish_transactions.id')
+   
+             ->where('created_time', '>=', $from)
+            ->where('created_time', '<=', $to)
+            ->where('finish_transaction_tests.package_id', '=', null);
+            if($insurance_id != null & $insurance_id != 'null'){
+       
+                $query_single->where('finish_transactions.insurance_id', '=', $insurance_id);
+        }
+        $result_single = $query_single->orderBy('finish_transactions.created_time', 'asc')
+            ->groupBy('finish_transaction_tests.id')
+            ->get()
+            ->toArray();
+
+            $results = array_merge($result_package, $result_single);
+            
+
+        return DataTables::of($results)
+            ->addIndexColumn()
+            ->escapeColumns([])
+            ->make(true);
+    }
+
+    public function SupportActivitiesPrint($startDate = null, $endDate = null, $insurance_id = null)
+    {
+        // if the startDate and the endDate not set, the query will be only for today's transactions
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+
+
+        $query_package = DB::table('finish_transactions')
+        ->select('finish_transactions.*', 'finish_transaction_tests.package_id', 'finish_transaction_tests.package_name')
+            ->leftjoin('finish_transaction_tests', 'finish_transaction_tests.finish_transaction_id', 'finish_transactions.id')
+            ->where('created_time', '>=', $from)
+            ->where('created_time', '<=', $to)
+            ->where('finish_transaction_tests.package_id', '!=', null);
+            if($insurance_id != null && $insurance_id != 'null'){
+                $query_package->where('finish_transactions.insurance_id', '=', $insurance_id);
+        }
+            $result_package = $query_package->orderBy('finish_transactions.created_time', 'asc')
+            ->groupBy('finish_transactions.id')
+            ->get()
+            ->toArray();
+
+
+        $query_single = DB::table('finish_transactions')
+        ->select('finish_transactions.*', 'finish_transactions.insurance_id'  ,'finish_transaction_tests.package_id', 'finish_transaction_tests.test_name')
+        ->leftjoin('finish_transaction_tests', 'finish_transaction_tests.finish_transaction_id', 'finish_transactions.id')
+   
+             ->where('created_time', '>=', $from)
+            ->where('created_time', '<=', $to)
+            ->where('finish_transaction_tests.package_id', '=', null);
+            if($insurance_id != null & $insurance_id != 'null'){
+       
+                $query_single->where('finish_transactions.insurance_id', '=', $insurance_id);
+        }
+        $result_single = $query_single->orderBy('finish_transactions.created_time', 'asc')
+            ->groupBy('finish_transaction_tests.id')
+            ->get()
+            ->toArray();
+
+            $results = array_merge($result_package, $result_single);
+
+        $data['supportData'] = $results;
+
+        if($insurance_id != null & $insurance_id != 'null'){
+            $insurances =  DB::table('insurances')->select('insurances.name as insurance_name')->where('insurances.id', $insurance_id)->first();
+
+            $insurance_name = $insurances->insurance_name;
+            $data['insurance'] = $insurance_name;
+        }else{
+            $data['insurance'] = '-';
+        }
+
+        if ($startDate != null && $endDate != null) {
+            $data["startDate"] = date('d/m/Y', strtotime($startDate));
+            $data["endDate"] = date('d/m/Y', strtotime($endDate));
+        } else {
+            $data["startDate"] = '-';
+            $data["endDate"] = '-';
+        }
+
+        return view('dashboard.report.report_support_activities.print', $data);
+    }
+    public function SupportActivitiesExcel($startDate = null, $endDate = null, $insurance_id = null)
+    {
+        // if the startDate and the endDate not set, the query will be only for today's transactions
+        if ($startDate == null && $endDate == null) {
+            $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        } else {
+            $from = Carbon::parse($startDate)->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+            $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+        }
+
+
+
+        $query_package = DB::table('finish_transactions')
+        ->select('finish_transactions.*', 'finish_transaction_tests.package_id', 'finish_transaction_tests.package_name')
+            ->leftjoin('finish_transaction_tests', 'finish_transaction_tests.finish_transaction_id', 'finish_transactions.id')
+            ->where('created_time', '>=', $from)
+            ->where('created_time', '<=', $to)
+            ->where('finish_transaction_tests.package_id', '!=', null);
+            if($insurance_id != null && $insurance_id != 'null'){
+                $query_package->where('finish_transactions.insurance_id', '=', $insurance_id);
+        }
+            $result_package = $query_package->orderBy('finish_transactions.created_time', 'asc')
+            ->groupBy('finish_transactions.id')
+            ->get()
+            ->toArray();
+
+
+        $query_single = DB::table('finish_transactions')
+        ->select('finish_transactions.*', 'finish_transactions.insurance_id'  ,'finish_transaction_tests.package_id', 'finish_transaction_tests.test_name')
+        ->leftjoin('finish_transaction_tests', 'finish_transaction_tests.finish_transaction_id', 'finish_transactions.id')
+   
+             ->where('created_time', '>=', $from)
+            ->where('created_time', '<=', $to)
+            ->where('finish_transaction_tests.package_id', '=', null);
+            if($insurance_id != null & $insurance_id != 'null'){
+       
+                $query_single->where('finish_transactions.insurance_id', '=', $insurance_id);
+        }
+        $result_single = $query_single->orderBy('finish_transactions.created_time', 'asc')
+            ->groupBy('finish_transaction_tests.id')
+            ->get()
+            ->toArray();
+
+            $results = array_merge($result_package, $result_single);
+
+        $data['supportData'] = $results;
+
+        if($insurance_id != null & $insurance_id != 'null'){
+            $insurances =  DB::table('insurances')->select('insurances.name as insurance_name')->where('insurances.id', $insurance_id)->first();
+
+            $insurance_name = $insurances->insurance_name;
+            $data['insurance'] = $insurance_name;
+        }else{
+            $data['insurance'] = '-';
+        }
+
+        if ($startDate != null && $endDate != null) {
+            $data["startDate"] = date('d/m/Y', strtotime($startDate));
+            $data["endDate"] = date('d/m/Y', strtotime($endDate));
+        } else {
+            $data["startDate"] = '-';
+            $data["endDate"] = '-';
+        }
+
+        $fileName = 'SUPPORT ACTIVITIES LAB REPORT.xlsx'; // Nama file Excel yang akan diunduh
+    
+        return Excel::download(new SupportActivitiesExport($data), $fileName);
+    }
+
 
     //===============================================================================================
     // PHLEBOTOMY & SAMPLING REPORT
@@ -2484,6 +3293,402 @@ class ReportController extends Controller
         
     }
 
+
+
+    // public function analyzerDatatable($startDate = null, $endDate = null, $test_id = null)
+    // {
+    //     // if the startDate and the endDate not set, the query will be only for today's transactions
+    //     if ($startDate == null && $endDate == null) {
+    //         // $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+    //         // $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+    //         $startDate = date('Y-m-d');
+    //         $endDate = date('Y-m-d');
+    //     }
+
+
+
+
+    //     // $query = DB::table('finish_transaction_tests')
+    //     //     ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test')
+    //     //     ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
+    //     //     ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
+    //     //     ->where('finish_transaction_tests.analyzer_id', '!=', null)
+    //     //     ->groupBy('finish_transaction_tests.analyzer_id');
+    //     // $analyzerData = $query->get();
+
+
+    //     // ====
+    //     // HEMA MANUAL
+    //     // ====
+    //     $total_hema_manual = 0;
+    //     $hema_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $hema_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $hema_manual_query->where('analyzer_name', 'HEMA MANUAL');
+    //     $hema_manual_query->groupBy('transaction_id');
+    //     $data_hema_manual = $hema_manual_query->get();
+    //     foreach ($data_hema_manual as $hema_manual) {
+    //         $total_hema_manual++;
+    //     }
+
+    //     // ====
+    //     // MINDRAY BC-700
+    //     // ====
+    //     $total_bc_700 = 0;
+    //     $bc_700_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $bc_700_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $bc_700_query->where('analyzer_name', 'MINDRAY BC-700');
+    //     $bc_700_query->groupBy('transaction_id');
+    //     $data_bc_700 = $bc_700_query->get();
+    //     foreach ($data_bc_700 as $bc_700) {
+    //         $total_bc_700++;
+    //     }
+
+    //     // ====
+    //     // MINDRAY BC-20s
+    //     // ====
+    //     $total_bc_20s = 0;
+    //     $bc_20s_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $bc_20s_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $bc_20s_query->where('analyzer_name', 'MINDRAY BC-20s');
+    //     $bc_20s_query->groupBy('transaction_id');
+    //     $data_bc_20s = $bc_20s_query->get();
+    //     foreach ($data_bc_20s as $bc_20s) {
+    //         $total_bc_20s++;
+    //     }
+
+    //     // ====
+    //     // MEDONIC
+    //     // ====
+    //     $total_medonic = 0;
+    //     $medonic_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $medonic_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $medonic_query->where('analyzer_name', 'MEDONIN');
+    //     $medonic_query->groupBy('transaction_id');
+    //     $data_medonic = $medonic_query->get();
+    //     foreach ($data_medonic as $medonic) {
+    //         $total_medonic++;
+    //     }
+
+    //     // ====
+    //     // BIOLIS 30i
+    //     // ====
+    //     $total_biolis30i = 0;
+    //     $biolis30i_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $biolis30i_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $biolis30i_query->where('analyzer_name', 'BIOLIS 30i');
+    //     $biolis30i_query->groupBy('transaction_id');
+    //     $data_biiolis30i = $biolis30i_query->get();
+    //     foreach ($data_biiolis30i as $biolis30i) {
+    //         $total_biolis30i++;
+    //     }
+
+    //     // ====
+    //     // BIOLIS 24i
+    //     // ====
+    //     $total_biolis24i = 0;
+    //     $biolis24i_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $biolis24i_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $biolis24i_query->where('analyzer_name', 'BIOLIS 24i');
+    //     $biolis24i_query->groupBy('transaction_id');
+    //     $data_biiolis24i = $biolis24i_query->get();
+    //     foreach ($data_biiolis24i as $biolis24i) {
+    //         $total_biolis24i++;
+    //     }
+
+    //     // ====
+    //     // CARETIUM 931
+    //     // ====
+    //     $total_caretium931 = 0;
+    //     $caretium931_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $caretium931_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $caretium931_query->where('analyzer_name', 'CATERIUM 931');
+    //     $caretium931_query->groupBy('transaction_id');
+    //     $data_caretium931 = $caretium931_query->get();
+    //     foreach ($data_caretium931 as $caretium931) {
+    //         $total_caretium931++;
+    //     }
+
+    //     // ====
+    //     // URINE MANUAL
+    //     // ====
+    //     $total_urine_manual = 0;
+    //     $urine_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $urine_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $urine_manual_query->where('analyzer_name', 'URINE MANUAL');
+    //     $urine_manual_query->groupBy('transaction_id');
+    //     $data_urine_manual = $urine_manual_query->get();
+    //     foreach ($data_urine_manual as $urine_manual) {
+    //         $total_urine_manual++;
+    //     }
+
+    //     // ====
+    //     // IMUN MANUAL
+    //     // ====
+    //     $total_imun_manual = 0;
+    //     $imun_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $imun_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $imun_manual_query->where('analyzer_name', 'IMUN MANUAL');
+    //     $imun_manual_query->groupBy('transaction_id');
+    //     $data_imun_manual = $imun_manual_query->get();
+    //     foreach ($data_imun_manual as $imun_manual) {
+    //         $total_imun_manual++;
+    //     }
+
+    //     // ====
+    //     // CARETIUM XC-A30
+    //     // ====
+    //     $total_caretium_xc = 0;
+    //     $caretium_xc_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $caretium_xc_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $caretium_xc_query->where('analyzer_name', 'CATERIUM XC-A30');
+    //     $caretium_xc_query->groupBy('transaction_id');
+    //     $data_caretium_xc = $caretium_xc_query->get();
+    //     foreach ($data_caretium_xc as $caretium_xc) {
+    //         $total_caretium_xc++;
+    //     }
+
+    //     // ====
+    //     // I-STAT
+    //     // ====
+    //     $total_i_stat = 0;
+    //     $i_stat_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $i_stat_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $i_stat_query->where('analyzer_name', 'I-STAT');
+    //     $i_stat_query->groupBy('transaction_id');
+    //     $data_i_stat = $i_stat_query->get();
+    //     foreach ($data_i_stat as $i_stat) {
+    //         $total_i_stat++;
+    //     }
+
+    //     // ====
+    //     // GEN EXPERT
+    //     // ====
+    //     $total_gen_exp = 0;
+    //     $gen_exp_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $gen_exp_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $gen_exp_query->where('analyzer_name', 'GEN EXPERT');
+    //     $gen_exp_query->groupBy('transaction_id');
+    //     $data_gen_exp = $gen_exp_query->get();
+    //     foreach ($data_gen_exp as $gen_exp) {
+    //         $total_gen_exp++;
+    //     }
+
+    //     // ====
+    //     // I-CHROMA
+    //     // ====
+    //     $total_ichroma = 0;
+    //     $ichroma_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $ichroma_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $ichroma_query->where('analyzer_name', 'I-CHROMA');
+    //     $ichroma_query->groupBy('transaction_id');
+    //     $data_ichroma = $ichroma_query->get();
+    //     foreach ($data_ichroma as $ichroma) {
+    //         $total_ichroma++;
+    //     }
+
+    //     // ====
+    //     // SEROLOGI MANUAL
+    //     // ====
+    //     $total_serologi_manual = 0;
+    //     $serologi_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $serologi_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $serologi_manual_query->where('analyzer_name', 'SEROLOGI MANUAL');
+    //     $serologi_manual_query->groupBy('transaction_id');
+    //     $data_serologi = $serologi_manual_query->get();
+    //     foreach ($data_serologi as $serologi) {
+    //         $total_serologi_manual++;
+    //     }
+
+    //     // ====
+    //     // FAECES MANUAL
+    //     // ====
+    //     $total_faeces_manual = 0;
+    //     $faeces_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $faeces_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $faeces_manual_query->where('analyzer_name', 'FAECES MANUAL');
+    //     $faeces_manual_query->groupBy('transaction_id');
+    //     $data_faeces_manual = $faeces_manual_query->get();
+    //     foreach ($data_faeces_manual as $faeces_manual) {
+    //         $total_faeces_manual++;
+    //     }
+
+    //     // ====
+    //     // CBS 400
+    //     // ====
+    //     $total_cbs400 = 0;
+    //     $cbs400_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $faeces_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $cbs400_query->where('analyzer_name', 'CBS 400');
+    //     $cbs400_query->groupBy('transaction_id');
+    //     $data_cbs400 = $cbs400_query->get();
+    //     foreach ($data_cbs400 as $cbs400) {
+    //         $total_cbs400++;
+    //     }
+
+    //     // ====
+    //     // ICHROMA II
+    //     // ====
+    //     $total_ichroma2 = 0;
+    //     $ichroma2_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $ichroma2_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $ichroma2_query->where('analyzer_name', 'ICHROMA II');
+    //     $ichroma2_query->groupBy('transaction_id');
+    //     $data_ichroma2 = $ichroma2_query->get();
+    //     foreach ($data_ichroma2 as $ichroma2) {
+    //         $total_ichroma2++;
+    //     }
+
+    //     // ====
+    //     // Mikrobiologi Manual
+    //     // ====
+    //     $total_mikrobiologi = 0;
+    //     $mikrobiologi_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $mikrobiologi_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $mikrobiologi_query->where('analyzer_name', 'Mikrobiologi Manual');
+    //     $mikrobiologi_query->groupBy('transaction_id');
+    //     $data_mikrobiologi = $mikrobiologi_query->get();
+    //     foreach ($data_mikrobiologi as $mikrobiologi) {
+    //         $total_mikrobiologi++;
+    //     }
+
+    //     // ====
+    //     // RUJUKAN
+    //     // ====
+    //     $total_rujukan = 0;
+    //     $rujukan_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $rujukan_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $rujukan_query->where('analyzer_name', 'RUJUKAN');
+    //     $rujukan_query->groupBy('transaction_id');
+    //     $data_rujukan = $rujukan_query->get();
+    //     foreach ($data_rujukan as $rujukan) {
+    //         $total_rujukan++;
+    //     }
+
+    //     // query analyzer name
+    //     $query = DB::table('analyzers')
+    //                 ->select('analyzers.id as analyzer_id', 'analyzers.name as analyzer_name')
+    //                 ->where('name', '!=', 'MORDT')
+    //                 ->where('name', '!=', 'DREW3')
+    //                 ->where('name', '!=', 'SELECTRA')
+    //                 ->where('name', '!=', 'DIRUI')
+    //                 ->where('name', '!=', 'SIEMENS')
+    //                 ->where('name', '!=', 'UROMETER 720')
+    //                 ->where('name', '!=', 'COBA ANALYZER')
+    //                 ->where('name', '!=', 'Lain-lain');
+    //     $data = $query->get();
+
+    //     // dd($data);
+
+    //     foreach($data as $key => $value){
+    //         if ($value->analyzer_name == 'HEMA MANUAL') {
+    //             $data[$key]->total = $total_hema_manual;
+    //         }elseif ($value->analyzer_name == 'MINDRAY BC-700'){
+    //             $data[$key]->total = $total_bc_700;
+    //         }elseif ($value->analyzer_name == 'MINDRAY BC-20s'){
+    //             $data[$key]->total = $total_bc_20s;
+    //         }elseif ($value->analyzer_name == 'MEDONIC'){
+    //             $data[$key]->total = $total_medonic;
+    //         }elseif ($value->analyzer_name == 'BIOLIS 30i'){
+    //             $data[$key]->total = $total_biolis30i;
+    //         }elseif ($value->analyzer_name == 'BIOLIS 24i'){
+    //             $data[$key]->total = $total_biolis24i;
+    //         }elseif ($value->analyzer_name == 'CARETIUM 931'){
+    //             $data[$key]->total = $total_caretium931;
+    //         }elseif ($value->analyzer_name == 'URINE MANUAL'){
+    //             $data[$key]->total = $total_urine_manual;
+    //         }elseif ($value->analyzer_name == 'IMUN MANUAL'){
+    //             $data[$key]->total = $total_imun_manual;
+    //         }elseif ($value->analyzer_name == 'CARETIUM XC-A30'){
+    //             $data[$key]->total = $total_caretium_xc;
+    //         }elseif ($value->analyzer_name == 'I-STAT'){
+    //             $data[$key]->total = $total_i_stat;
+    //         }elseif ($value->analyzer_name == 'GEN EXPERT'){
+    //             $data[$key]->total = $total_gen_exp;
+    //         }elseif ($value->analyzer_name == 'I-CHROMA'){
+    //             $data[$key]->total = $total_ichroma;
+    //         }elseif ($value->analyzer_name == 'SEROLOGI MANUAL'){
+    //             $data[$key]->total = $total_serologi_manual;
+    //         }elseif ($value->analyzer_name == 'FAECES MANUAL'){
+    //             $data[$key]->total = $total_faeces_manual;
+    //         }elseif ($value->analyzer_name == 'CBS-400'){
+    //             $data[$key]->total = $total_cbs400;
+    //         }elseif ($value->analyzer_name == 'ICHROMA II'){
+    //             $data[$key]->total = $total_ichroma2;
+    //         }elseif ($value->analyzer_name == 'Mikrobiologi Manual'){
+    //             $data[$key]->total = $total_mikrobiologi;
+    //         }elseif ($value->analyzer_name == 'RUJUKAN'){
+    //             $data[$key]->total = $total_rujukan;
+    //         }
+    //     }
+
+    //     // echo '<pre>';
+    //     // print_r($data);
+
+    //     // die;
+
+    //     return DataTables::of($data)
+    //         ->addIndexColumn()
+    //         ->escapeColumns([])
+    //         ->make(true);
+    // }
+
     public function analyzerDatatable($startDate = null, $endDate = null, $test_id = null)
     {
         // if the startDate and the endDate not set, the query will be only for today's transactions
@@ -2495,22 +3700,546 @@ class ReportController extends Controller
             $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
         }
 
-        $query = DB::table('finish_transaction_tests')
-            ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test')
-            ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
-            ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
-            ->where('finish_transaction_tests.analyzer_id', '!=', null)
-            ->groupBy('finish_transaction_tests.analyzer_id');
-        $analyzerData = $query->get();
+        // $query = DB::table('finish_transaction_tests')
+        //     ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test')
+        //     ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
+        //     ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
+        //     ->where('finish_transaction_tests.analyzer_id', '!=', null)
+        //     ->groupBy('finish_transaction_tests.analyzer_id');
+        // $analyzerData = $query->get();
+
+        $query_package = DB::table('finish_transaction_tests')
+        ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.package_id ,finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test, finish_transaction_tests.type, finish_transaction_tests.package_name, DATE(finish_transaction_tests.input_time) as input_time')
+        ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
+        ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
+        ->where('finish_transaction_tests.analyzer_id', '!=', null)
+        ->where('finish_transaction_tests.package_id', '!=', null)
+        ->orderBy('finish_transaction_tests.input_time','asc')
+        ->groupBy('finish_transactions.id');
+    $analyzerDataPackage = $query_package->get();
+
+    $query_test = DB::table('finish_transaction_tests')
+        ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.test_id  ,finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test_test, finish_transaction_tests.type, finish_transaction_tests.test_name, DATE(finish_transaction_tests.input_time) as input_time ')
+        ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
+        ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
+        ->where('finish_transaction_tests.analyzer_id', '!=', null)
+        ->where('finish_transaction_tests.package_id', '=', null)
+        ->where('finish_transaction_tests.package_name', '=', null)
+        ->orderBy('finish_transaction_tests.input_time','asc')
+        ->groupBy('finish_transactions.id');
+    $analyzerDataTest = $query_test->get();
+
+    $arrayMerge = collect([]);
+    $arrayMerge = $arrayMerge->merge( $analyzerDataPackage)->merge($analyzerDataTest);
+
+
+   
+
+    $count_package = DB::table('finish_transaction_tests')
+    ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.package_id, finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test, finish_transaction_tests.type, finish_transaction_tests.package_name, DATE(finish_transaction_tests.input_time) as input_time')
+
+        ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
+        ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
+        ->where('finish_transaction_tests.analyzer_id', '!=', null)
+        ->where('finish_transaction_tests.package_id', '!=', null)
+        ->orderBy('finish_transaction_tests.input_time','asc')
+        ->groupBy('finish_transactions.id');
+    $count_package = $query_package->get();
+
+
+ 
+
+    $total = 0;
+    foreach ($arrayMerge as $key => $value) {
+        $date = date('Y-m-d', strtotime($value->input_time));
+
+        // If date does not exist in $totalByDate array, add it as a new element
+        if (!isset($totalByDate[$date])) {
+            $totalByDate[$date] = [];
+        }
+       
+        if (isset($value->package_id)) {
+
+            if( $value->package_id === $count_package[$key]->package_id && $value->analyzer_id === $count_package[$key]->analyzer_id)
+            {
+                $total = $value->total_test - $count_package[$key]->total_test;
+                $total = 1;
+            }
+            elseif( $value->package_id === $count_package[$key]->package_id && $value->analyzer_id === $count_package[$key]->analyzer_id   && $value->input_time !== $count_package[$key]->input_time)   
+             {
+                $total = $value->total_test - $count_package[$key]->total_test;
+                $total = 1;
+            }
+
+            $arrayMerge[$key]->type = 'package';
+            $arrayMerge[$key]->test_id = '';
+            $arrayMerge[$key]->test_name = '';
+            $arrayMerge[$key]->total = $total;
+            $arrayMerge[$key]->input_time = $value->input_time;
+            $arrayMerge[$key]->package_id = $value->package_id;
+            $arrayMerge[$key]->package_name = $value->package_name;
+            $totalByDate[$date][] = $arrayMerge[$key];
+        }
+    
+        if ($value->test_id != '') {
+            $arrayMerge[$key]->type = 'single';
+            $arrayMerge[$key]->package_id = '';
+            $arrayMerge[$key]->package_name = '';
+            $arrayMerge[$key]->total =  $value->total_test_test;
+            $arrayMerge[$key]->input_time = $value->input_time;
+            $arrayMerge[$key]->test_id = $value->test_id;
+            $arrayMerge[$key]->test_name = $value->test_name;
+    
+  
+       
+        }
+    }
+
+    $totalByDate = [];
+
+    foreach ($arrayMerge as $key => $value) {
+        $date = date('Y-m-d', strtotime($value->input_time));
+    
+        // If date does not exist in $totalByDate array, add it as a new element
+        if (!isset($totalByDate[$date])) {
+            $totalByDate[$date] = [];
+        }
+    
+        // Check if the same test_name or package_name and insurance already exists for the current date
+        $exists = false;
+        foreach ($totalByDate[$date] as $index => $test) {
+            if ($test->analyzer_id === $value->analyzer_id ) {
+                $exists = true;
+                $totalByDate[$date][$index]->total += $value->total;
+                break;
+            }
+        }
+    
+        if (!$exists) {
+            $totalByDate[$date][] = $value;
+        }
+    }
+
+
+         // Flatten the $totalByDate array and add it to $arrayMerge
+         $arrayMerge = [];
+         foreach ($totalByDate as $dateTests) {
+             $arrayMerge = array_merge($arrayMerge, $dateTests);
+         }
+         
+         
+         // Merge $totalByDate array to $arrayMerge
+         $arrayMerge = collect();
+         foreach ($totalByDate as $tests) {
+             foreach ($tests as $test) {
+                 $arrayMerge->push($test);
+             }
+         }
+
+
+// Sorting the merged collection by input_time
+$arrayMerge = $arrayMerge->sortBy('input_time');
 
         // echo '<pre>';
-        // print_r($analyzerData);
+        // print_r($arrayMerge);
+        // die;
 
-        return DataTables::of($analyzerData)
+        return DataTables::of( $arrayMerge)
             ->addIndexColumn()
             ->escapeColumns([])
             ->make(true);
     }
+
+    // public function analyzerPrint($startDate = null, $endDate = null, $test_id = null)
+    // {
+    //     // if the startDate and the endDate not set, the query will be only for today's transactions
+    //     if ($startDate == null && $endDate == null) {
+    //         // $from = Carbon::today()->addHours(0)->addMinutes(0)->addSeconds(0)->toDateTimeString();
+    //         // $to = Carbon::today()->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
+    //         $startDate = date('Y-m-d');
+    //         $endDate = date('Y-m-d');
+    //     }
+
+    //     // $query = DB::table('finish_transaction_tests')
+    //     //     ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test')
+    //     //     ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
+    //     //     ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
+    //     //     ->where('finish_transaction_tests.analyzer_id', '!=', null)
+    //     //     ->groupBy('finish_transaction_tests.analyzer_id');
+    //     // $analyzerData = $query->get();
+
+
+    //     // ====
+    //     // HEMA MANUAL
+    //     // ====
+    //     $total_hema_manual = 0;
+    //     $hema_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $hema_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $hema_manual_query->where('analyzer_name', 'HEMA MANUAL');
+    //     $hema_manual_query->groupBy('transaction_id');
+    //     $data_hema_manual = $hema_manual_query->get();
+    //     foreach ($data_hema_manual as $hema_manual) {
+    //         $total_hema_manual++;
+    //     }
+
+    //     // ====
+    //     // MINDRAY BC-700
+    //     // ====
+    //     $total_bc_700 = 0;
+    //     $bc_700_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $bc_700_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $bc_700_query->where('analyzer_name', 'MINDRAY BC-700');
+    //     $bc_700_query->groupBy('transaction_id');
+    //     $data_bc_700 = $bc_700_query->get();
+    //     foreach ($data_bc_700 as $bc_700) {
+    //         $total_bc_700++;
+    //     }
+
+    //     // ====
+    //     // MINDRAY BC-20s
+    //     // ====
+    //     $total_bc_20s = 0;
+    //     $bc_20s_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $bc_20s_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $bc_20s_query->where('analyzer_name', 'MINDRAY BC-20s');
+    //     $bc_20s_query->groupBy('transaction_id');
+    //     $data_bc_20s = $bc_20s_query->get();
+    //     foreach ($data_bc_20s as $bc_20s) {
+    //         $total_bc_20s++;
+    //     }
+
+    //     // ====
+    //     // MEDONIC
+    //     // ====
+    //     $total_medonic = 0;
+    //     $medonic_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $medonic_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $medonic_query->where('analyzer_name', 'MEDONIN');
+    //     $medonic_query->groupBy('transaction_id');
+    //     $data_medonic = $medonic_query->get();
+    //     foreach ($data_medonic as $medonic) {
+    //         $total_medonic++;
+    //     }
+
+    //     // ====
+    //     // BIOLIS 30i
+    //     // ====
+    //     $total_biolis30i = 0;
+    //     $biolis30i_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $biolis30i_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $biolis30i_query->where('analyzer_name', 'BIOLIS 30i');
+    //     $biolis30i_query->groupBy('transaction_id');
+    //     $data_biiolis30i = $biolis30i_query->get();
+    //     foreach ($data_biiolis30i as $biolis30i) {
+    //         $total_biolis30i++;
+    //     }
+
+    //     // ====
+    //     // BIOLIS 24i
+    //     // ====
+    //     $total_biolis24i = 0;
+    //     $biolis24i_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $biolis24i_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $biolis24i_query->where('analyzer_name', 'BIOLIS 24i');
+    //     $biolis24i_query->groupBy('transaction_id');
+    //     $data_biiolis24i = $biolis24i_query->get();
+    //     foreach ($data_biiolis24i as $biolis24i) {
+    //         $total_biolis24i++;
+    //     }
+
+    //     // ====
+    //     // CARETIUM 931
+    //     // ====
+    //     $total_caretium931 = 0;
+    //     $caretium931_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $caretium931_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $caretium931_query->where('analyzer_name', 'CATERIUM 931');
+    //     $caretium931_query->groupBy('transaction_id');
+    //     $data_caretium931 = $caretium931_query->get();
+    //     foreach ($data_caretium931 as $caretium931) {
+    //         $total_caretium931++;
+    //     }
+
+    //     // ====
+    //     // URINE MANUAL
+    //     // ====
+    //     $total_urine_manual = 0;
+    //     $urine_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $urine_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $urine_manual_query->where('analyzer_name', 'URINE MANUAL');
+    //     $urine_manual_query->groupBy('transaction_id');
+    //     $data_urine_manual = $urine_manual_query->get();
+    //     foreach ($data_urine_manual as $urine_manual) {
+    //         $total_urine_manual++;
+    //     }
+
+    //     // ====
+    //     // IMUN MANUAL
+    //     // ====
+    //     $total_imun_manual = 0;
+    //     $imun_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $imun_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $imun_manual_query->where('analyzer_name', 'IMUN MANUAL');
+    //     $imun_manual_query->groupBy('transaction_id');
+    //     $data_imun_manual = $imun_manual_query->get();
+    //     foreach ($data_imun_manual as $imun_manual) {
+    //         $total_imun_manual++;
+    //     }
+
+    //     // ====
+    //     // CARETIUM XC-A30
+    //     // ====
+    //     $total_caretium_xc = 0;
+    //     $caretium_xc_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $caretium_xc_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $caretium_xc_query->where('analyzer_name', 'CATERIUM XC-A30');
+    //     $caretium_xc_query->groupBy('transaction_id');
+    //     $data_caretium_xc = $caretium_xc_query->get();
+    //     foreach ($data_caretium_xc as $caretium_xc) {
+    //         $total_caretium_xc++;
+    //     }
+
+    //     // ====
+    //     // I-STAT
+    //     // ====
+    //     $total_i_stat = 0;
+    //     $i_stat_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $i_stat_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $i_stat_query->where('analyzer_name', 'I-STAT');
+    //     $i_stat_query->groupBy('transaction_id');
+    //     $data_i_stat = $i_stat_query->get();
+    //     foreach ($data_i_stat as $i_stat) {
+    //         $total_i_stat++;
+    //     }
+
+    //     // ====
+    //     // GEN EXPERT
+    //     // ====
+    //     $total_gen_exp = 0;
+    //     $gen_exp_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $gen_exp_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $gen_exp_query->where('analyzer_name', 'GEN EXPERT');
+    //     $gen_exp_query->groupBy('transaction_id');
+    //     $data_gen_exp = $gen_exp_query->get();
+    //     foreach ($data_gen_exp as $gen_exp) {
+    //         $total_gen_exp++;
+    //     }
+
+    //     // ====
+    //     // I-CHROMA
+    //     // ====
+    //     $total_ichroma = 0;
+    //     $ichroma_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $ichroma_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $ichroma_query->where('analyzer_name', 'I-CHROMA');
+    //     $ichroma_query->groupBy('transaction_id');
+    //     $data_ichroma = $ichroma_query->get();
+    //     foreach ($data_ichroma as $ichroma) {
+    //         $total_ichroma++;
+    //     }
+
+    //     // ====
+    //     // SEROLOGI MANUAL
+    //     // ====
+    //     $total_serologi_manual = 0;
+    //     $serologi_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $serologi_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $serologi_manual_query->where('analyzer_name', 'SEROLOGI MANUAL');
+    //     $serologi_manual_query->groupBy('transaction_id');
+    //     $data_serologi = $serologi_manual_query->get();
+    //     foreach ($data_serologi as $serologi) {
+    //         $total_serologi_manual++;
+    //     }
+
+    //     // ====
+    //     // FAECES MANUAL
+    //     // ====
+    //     $total_faeces_manual = 0;
+    //     $faeces_manual_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $faeces_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $faeces_manual_query->where('analyzer_name', 'FAECES MANUAL');
+    //     $faeces_manual_query->groupBy('transaction_id');
+    //     $data_faeces_manual = $faeces_manual_query->get();
+    //     foreach ($data_faeces_manual as $faeces_manual) {
+    //         $total_faeces_manual++;
+    //     }
+
+    //     // ====
+    //     // CBS 400
+    //     // ====
+    //     $total_cbs400 = 0;
+    //     $cbs400_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $faeces_manual_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $cbs400_query->where('analyzer_name', 'CBS 400');
+    //     $cbs400_query->groupBy('transaction_id');
+    //     $data_cbs400 = $cbs400_query->get();
+    //     foreach ($data_cbs400 as $cbs400) {
+    //         $total_cbs400++;
+    //     }
+
+    //     // ====
+    //     // ICHROMA II
+    //     // ====
+    //     $total_ichroma2 = 0;
+    //     $ichroma2_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $ichroma2_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $ichroma2_query->where('analyzer_name', 'ICHROMA II');
+    //     $ichroma2_query->groupBy('transaction_id');
+    //     $data_ichroma2 = $ichroma2_query->get();
+    //     foreach ($data_ichroma2 as $ichroma2) {
+    //         $total_ichroma2++;
+    //     }
+
+    //     // ====
+    //     // Mikrobiologi Manual
+    //     // ====
+    //     $total_mikrobiologi = 0;
+    //     $mikrobiologi_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $mikrobiologi_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $mikrobiologi_query->where('analyzer_name', 'Mikrobiologi Manual');
+    //     $mikrobiologi_query->groupBy('transaction_id');
+    //     $data_mikrobiologi = $mikrobiologi_query->get();
+    //     foreach ($data_mikrobiologi as $mikrobiologi) {
+    //         $total_mikrobiologi++;
+    //     }
+
+    //     // ====
+    //     // RUJUKAN
+    //     // ====
+    //     $total_rujukan = 0;
+    //     $rujukan_query = DB::table('finish_transaction_tests')
+    //         ->select('transaction_id', 'analyzer_id', 'analyzer_name');
+    //     if (($startDate != null) && ($endDate != null)) {
+    //         $rujukan_query->whereRaw("date(input_time) between '" . $startDate . "' and '" . $endDate . "'");
+    //     }
+    //     $rujukan_query->where('analyzer_name', 'RUJUKAN');
+    //     $rujukan_query->groupBy('transaction_id');
+    //     $data_rujukan = $rujukan_query->get();
+    //     foreach ($data_rujukan as $rujukan) {
+    //         $total_rujukan++;
+    //     }
+
+    //     // query analyzer name
+    //     $query = DB::table('analyzers')
+    //                 ->select('analyzers.id as analyzer_id', 'analyzers.name as analyzer_name')
+    //                 ->where('name', '!=', 'MORDT')
+    //                 ->where('name', '!=', 'DREW3')
+    //                 ->where('name', '!=', 'SELECTRA')
+    //                 ->where('name', '!=', 'DIRUI')
+    //                 ->where('name', '!=', 'SIEMENS')
+    //                 ->where('name', '!=', 'UROMETER 720')
+    //                 ->where('name', '!=', 'COBA ANALYZER')
+    //                 ->where('name', '!=', 'Lain-lain');
+    //     $data = $query->get();
+
+    //     foreach($data as $key => $value){
+    //         if ($value->analyzer_name == 'HEMA MANUAL') {
+    //             $data[$key]->total = $total_hema_manual;
+    //         }elseif ($value->analyzer_name == 'MINDRAY BC-700'){
+    //             $data[$key]->total = $total_bc_700;
+    //         }elseif ($value->analyzer_name == 'MINDRAY BC-20s'){
+    //             $data[$key]->total = $total_bc_20s;
+    //         }elseif ($value->analyzer_name == 'MEDONIC'){
+    //             $data[$key]->total = $total_medonic;
+    //         }elseif ($value->analyzer_name == 'BIOLIS 30i'){
+    //             $data[$key]->total = $total_biolis30i;
+    //         }elseif ($value->analyzer_name == 'BIOLIS 24i'){
+    //             $data[$key]->total = $total_biolis24i;
+    //         }elseif ($value->analyzer_name == 'CARETIUM 931'){
+    //             $data[$key]->total = $total_caretium931;
+    //         }elseif ($value->analyzer_name == 'URINE MANUAL'){
+    //             $data[$key]->total = $total_urine_manual;
+    //         }elseif ($value->analyzer_name == 'IMUN MANUAL'){
+    //             $data[$key]->total = $total_imun_manual;
+    //         }elseif ($value->analyzer_name == 'CARETIUM XC-A30'){
+    //             $data[$key]->total = $total_caretium_xc;
+    //         }elseif ($value->analyzer_name == 'I-STAT'){
+    //             $data[$key]->total = $total_i_stat;
+    //         }elseif ($value->analyzer_name == 'GEN EXPERT'){
+    //             $data[$key]->total = $total_gen_exp;
+    //         }elseif ($value->analyzer_name == 'I-CHROMA'){
+    //             $data[$key]->total = $total_ichroma;
+    //         }elseif ($value->analyzer_name == 'SEROLOGI MANUAL'){
+    //             $data[$key]->total = $total_serologi_manual;
+    //         }elseif ($value->analyzer_name == 'FAECES MANUAL'){
+    //             $data[$key]->total = $total_faeces_manual;
+    //         }elseif ($value->analyzer_name == 'CBS-400'){
+    //             $data[$key]->total = $total_cbs400;
+    //         }elseif ($value->analyzer_name == 'ICHROMA II'){
+    //             $data[$key]->total = $total_ichroma2;
+    //         }elseif ($value->analyzer_name == 'Mikrobiologi Manual'){
+    //             $data[$key]->total = $total_mikrobiologi;
+    //         }elseif ($value->analyzer_name == 'RUJUKAN'){
+    //             $data[$key]->total = $total_rujukan;
+    //         }
+    //     }
+
+    //     $data['analyzerData'] = $data;
+
+    //     if ($startDate != null && $endDate != null) {
+    //         $data["startDate"] = date('d/m/Y', strtotime($startDate));
+    //         $data["endDate"] = date('d/m/Y', strtotime($endDate));
+    //     } else {
+    //         $data["startDate"] = '-';
+    //         $data["endDate"] = '-';
+    //     }
+
+    //     return view('dashboard.report.report_analyzer.print', $data);
+    // }
 
     public function analyzerPrint($startDate = null, $endDate = null, $test_id = null)
     {
@@ -2523,18 +4252,139 @@ class ReportController extends Controller
             $to = Carbon::parse($endDate)->addHours(23)->addMinutes(59)->addSeconds(59)->toDateTimeString();
         }
 
-        $query = DB::table('finish_transaction_tests')
-            ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test')
+        $query_package = DB::table('finish_transaction_tests')
+            ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.package_id ,finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test, finish_transaction_tests.type, finish_transaction_tests.package_name, finish_transaction_tests.input_time')
             ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
             ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
             ->where('finish_transaction_tests.analyzer_id', '!=', null)
-            ->groupBy('finish_transaction_tests.analyzer_id');
-        $analyzerData = $query->get();
+            ->where('finish_transaction_tests.package_id', '!=', null)
+            ->orderBy('finish_transaction_tests.input_time','asc')
+            ->groupBy('finish_transactions.id');
+        $analyzerDataPackage = $query_package->get();
+
+        $query_test = DB::table('finish_transaction_tests')
+            ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.test_id  ,finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test, finish_transaction_tests.type, finish_transaction_tests.test_name, finish_transaction_tests.input_time ')
+            ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
+            ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
+            ->where('finish_transaction_tests.analyzer_id', '!=', null)
+            ->where('finish_transaction_tests.package_id', '=', null)
+            ->where('finish_transaction_tests.package_name', '=', null)
+            ->orderBy('finish_transaction_tests.input_time','asc')
+            ->groupBy('finish_transactions.id');
+        $analyzerDataTest = $query_test->get();
+
+        $arrayMerge = collect([]);
+        $arrayMerge = $arrayMerge->merge( $analyzerDataPackage)->merge($analyzerDataTest);
+
+
+       
+
+        $count_package = DB::table('finish_transaction_tests')
+        ->selectRaw('finish_transaction_tests.id, finish_transaction_tests.package_id ,finish_transaction_tests.analyzer_id, finish_transaction_tests.analyzer_name, COUNT(finish_transaction_tests.analyzer_id) as total_test, finish_transaction_tests.type, finish_transaction_tests.package_name, finish_transaction_tests.input_time')
+            ->leftJoin('finish_transactions', 'finish_transaction_tests.transaction_id', '=', 'finish_transactions.transaction_id')
+            ->whereRaw("date(finish_transactions.created_time) between '" . $from . "' and '" . $to . "'")
+            ->where('finish_transaction_tests.analyzer_id', '!=', null)
+            ->where('finish_transaction_tests.package_id', '!=', null)
+            ->orderBy('finish_transaction_tests.input_time','asc')
+            ->groupBy('finish_transactions.id');
+        $count_package = $query_package->get();
+
+
+     
+
+        $total = 0;
+        foreach ($arrayMerge as $key => $value) {
+            $date = date('Y-m-d', strtotime($value->input_time));
+
+            // If date does not exist in $totalByDate array, add it as a new element
+            if (!isset($totalByDate[$date])) {
+                $totalByDate[$date] = [];
+            }
+           
+            if (isset($value->package_id)) {
+
+                if( $value->package_id === $count_package[$key]->package_id && $value->analyzer_id === $count_package[$key]->analyzer_id)
+                {
+                    $total = $value->total_test - $count_package[$key]->total_test;
+                    $total = 1;
+                }
+                elseif( $value->package_id === $count_package[$key]->package_id && $value->analyzer_id === $count_package[$key]->analyzer_id   && $value->input_time !== $count_package[$key]->input_time)   
+                 {
+                    $total = $value->total_test - $count_package[$key]->total_test;
+                    $total = 1;
+                }
+
+                $arrayMerge[$key]->type = 'package';
+                $arrayMerge[$key]->test_id = '';
+                $arrayMerge[$key]->test_name = '';
+                $arrayMerge[$key]->total = $total;
+                $arrayMerge[$key]->input_time = $value->input_time;
+                $arrayMerge[$key]->package_id = $value->package_id;
+                $arrayMerge[$key]->package_name = $value->package_name;
+                $arrayMerge[$key]->total_analyzer = 0;
+                $totalByDate[$date][] = $arrayMerge[$key];
+            }
+        
+            if ($value->test_id != '') {
+                $arrayMerge[$key]->type = 'single';
+                $arrayMerge[$key]->package_id = '';
+                $arrayMerge[$key]->package_name = '';
+                $arrayMerge[$key]->total =  $value->total_test;
+                $arrayMerge[$key]->input_time = $value->input_time;
+                $arrayMerge[$key]->test_id = $value->test_id;
+                $arrayMerge[$key]->test_name = $value->test_name;
+                $arrayMerge[$key]->total_analyzer = 0;
+        
+      
+           
+            }
+        }
+
+        foreach ($arrayMerge as $value) {
+            $analyzerId = $value->analyzer_id;
+        
+            if (!isset($analyzerTotals[$analyzerId])) {
+                $analyzerTotals[$analyzerId] = [
+                    'analyzer_id' => $analyzerId,
+                    'analyzer_name' => $value->analyzer_name,
+                    'total' => 0,
+                ];
+            }
+        
+            // Increment the total based on the type (package or single)
+            $analyzerTotals[$analyzerId]['total'] += ($value->type === 'package') ? $value->total : $value->total_test;
+        }
+        
+        // Convert the associative array to a simple indexed array
+        $finalAnalyzerData = array_values($analyzerTotals);
 
         // echo '<pre>';
-        // print_r($analyzerData);
+        // print_r($finalAnalyzerData);
+        // die;
 
-        $data['analyzerData'] = $analyzerData;
+//              // Flatten the $totalByDate array and add it to $arrayMerge
+//              $arrayMerge = [];
+//              foreach ($totalByDate as $dateTests) {
+//                  $arrayMerge = array_merge($arrayMerge, $dateTests);
+//              }
+             
+             
+//              // Merge $totalByDate array to $arrayMerge
+//              $arrayMerge = collect();
+//              foreach ($totalByDate as $tests) {
+//                  foreach ($tests as $test) {
+//                      $arrayMerge->push($test);
+//                  }
+//              }
+
+//              // Sorting the merged collection by input_time
+// $arrayMerge = $arrayMerge->sortBy('input_time');
+
+    
+
+   
+
+        $data['analyzerData'] =  $finalAnalyzerData;
 
         if ($startDate != null && $endDate != null) {
             $data["startDate"] = date('d/m/Y', strtotime($startDate));
@@ -2546,7 +4396,6 @@ class ReportController extends Controller
 
         return view('dashboard.report.report_analyzer.print', $data);
     }
-
     //===============================================================================================
     // USER REPORT
     //===============================================================================================

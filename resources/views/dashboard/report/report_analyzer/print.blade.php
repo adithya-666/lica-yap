@@ -116,28 +116,47 @@
             <thead>
                 <tr>
                     <th class="border-bottom" style="text-align: center;">No</th>
+                   
                     <th class="border-bottom" style="text-align: center;">ID Analyzer</th>
                     <th class="border-bottom" style="text-align: center;">Nama Analyzer</th>
                     <th class="border-bottom" style="text-align: center;">Jumlah Test</th>
+               
                 </tr>
             </thead>
             <tbody>
                 @php
                 $index = 1;
+                $analyzer = ''; // Inisialisasi variabel $analyzer dengan string kosong
+                $total_analyzer = 0;
+                $analyzer_id = '';
+                $prev_date = null;
                 @endphp
+        
                 @foreach($analyzerData as $data)
-                <tr>
-                    <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $index }}</td>
-                    <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $data->analyzer_id }}</td>
-                    <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $data->analyzer_name }}</td>
-                    <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $data->total_test }}</td>
-                </tr>
-                @php
-                $index++;
-                @endphp
+               
+                
+                 
+              
+        
+                    <tr>
+                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $index }}</td>
+                        <td style="text-align: center; border: 1px solid black; font-weight: bold;">{{ $data['analyzer_id'] }}</td>
+                        <td style="text-align: center; border: 1px solid black; font-weight: bold;">{{ $data['analyzer_name'] }}</td>
+                  
+                        <td style="text-align: center; border: 1px solid black; border-collapse: collapse;">{{ $data['total'] }}</td>
+              
+                    </tr>
+        
+                    @php
+             
+                    $index++;
+                    @endphp
                 @endforeach
+        
+           
             </tbody>
         </table>
+        
 </body>
 
 </html>

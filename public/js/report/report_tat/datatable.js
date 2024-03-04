@@ -19,7 +19,8 @@ var columnsDataTable = [
     { data: 'checkin_time', 
         render: function (data, type, row, meta) {
             var checkin_time = moment(row.checkin_time).format("HH:mm:ss");
-            return checkin_time;
+            var date = moment(row.created_time).format("DD/MM/YYYY");
+            return date +' '+checkin_time;
         }
     },
     { data: 'analytic_time',
@@ -31,6 +32,15 @@ var columnsDataTable = [
             return '+ ' + analytic_time;
         }
     },
+    { data: 'verify_time',
+        render: function (data, type, row, meta) {
+            var checkin_time = moment(row.checkin_time).format("HH:mm:ss");
+            var verify = moment(row.verify_time).format("HH:mm:ss");
+            var verify_time = moment.utc(moment(verify, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
+
+            return '+ ' + verify_time;
+        }
+    },
     { data: 'validate_time', name: 'finish_transaction_tests.validate_time',
         render: function (data, type, row, meta) {
             var checkin_time = moment(row.checkin_time).format("HH:mm:ss");
@@ -40,38 +50,48 @@ var columnsDataTable = [
             return '+ ' + validate_time;
         }
     },
-    { data: 'post_time',
+    {
+        data: 'post_time',
         render: function (data, type, row, meta) {
-            var checkin_time = moment(row.checkin_time).format("HH:mm:ss");
-            var post = moment(row.post_time).format("HH:mm:ss");
-            var post_time = moment.utc(moment(post, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
-
-            return '+ ' + post_time;
-        }
-    },
-    { data: 'id', 
-        render: function (data, type, row, meta) {
-            // checkin time
-            var checkin_time = moment(row.checkin_time).format("HH:mm:ss");
-            // analytic time
-            var analytic = moment(row.analytic_time).format("HH:mm:ss");
-            var analytic_time = moment.utc(moment(analytic, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
-            // validate time
-            var validate = moment(row.validate_time).format("HH:mm:ss");
-            var validate_time = moment.utc(moment(validate, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
-            // post time
-            var post = moment(row.post_time).format("HH:mm:ss");
-            var post_time = moment.utc(moment(post, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
-            // analytic + validate
-            var anal_val = moment.duration(analytic_time).add(moment.duration(validate_time))
-            var result_anal_val = moment.utc(anal_val.as('milliseconds')).format("HH:mm:ss")
-            // (analytic + validate) + post time
-            var total = moment.duration(result_anal_val).add(moment.duration(post_time))
-            var total_time = moment.utc(total.as('milliseconds')).format("HH:mm:ss")
-
-            return '+ ' + total_time;
+            var checkin_time = moment(row.checkin_time);
+            var post_time = moment(row.post_time);
+    
+            if (!checkin_time.isValid() || !post_time.isValid()) {
+                return '-';
+            }
+    
+            checkin_time = checkin_time.format("HH:mm:ss");
+            post_time = post_time.format("HH:mm:ss");
+            
+            var diff_time = moment.utc(moment(post_time, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
+            
+            return '+ ' + diff_time;
         }
     }
+    
+    // { data: 'id', 
+    //     render: function (data, type, row, meta) {
+    //         // checkin time
+    //         var checkin_time = moment(row.checkin_time).format("HH:mm:ss");
+    //         // analytic time
+    //         var analytic = moment(row.analytic_time).format("HH:mm:ss");
+    //         var analytic_time = moment.utc(moment(analytic, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
+    //         // validate time
+    //         var validate = moment(row.validate_time).format("HH:mm:ss");
+    //         var validate_time = moment.utc(moment(validate, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
+    //         // post time
+    //         var post = moment(row.post_time).format("HH:mm:ss");
+    //         var post_time = moment.utc(moment(post, "HH:mm:ss").diff(moment(checkin_time, "HH:mm:ss"))).format("HH:mm:ss");
+    //         // analytic + validate
+    //         var anal_val = moment.duration(analytic_time).add(moment.duration(validate_time))
+    //         var result_anal_val = moment.utc(anal_val.as('milliseconds')).format("HH:mm:ss")
+    //         // (analytic + validate) + post time
+    //         var total = moment.duration(result_anal_val).add(moment.duration(post_time))
+    //         var total_time = moment.utc(total.as('milliseconds')).format("HH:mm:ss")
+
+    //         return '+ ' + total_time;
+    //     }
+    // }
   ];
   
   // Datatable Component

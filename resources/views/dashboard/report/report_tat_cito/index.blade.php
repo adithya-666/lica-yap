@@ -29,7 +29,7 @@
                                 <div class="d-flex justify-content-between mb-5">
                                     <div class="col-lg-3">
                                         <button type="button" id="print-report" href="{{url('report/tat-cito-print')}}" class="btn btn-sm btn-light btnPrint">Print Report</button>
-                                        <button type="button" id="export-report" class="btn btn-sm btn-light" onclick="tablesToExcel(['datatables'], ['TAT Report'], 'TAT-Report.xls', 'Excel')">Export Excel</button>
+                                        <button type="button" id="export-report" class="btn btn-sm btn-light" onclick="tablesToExcel(['datatables'], ['TAT Report'], 'TAT CITO-Report.xls', 'Excel')">Export Excel</button>
                                     </div>
                                     <div class="col-lg-3">
 

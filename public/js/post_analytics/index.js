@@ -127,10 +127,13 @@ var DateRangePicker = () => {
   });
 }
 var onSelectTransaction = (selectedData) => {
-    console.log(selectedData)
+    // console.log(selectedData)
   const patient = selectedData.patient;
   const room = selectedData.room;
   const transactionId = selectedData.id;
+  const no_order = selectedData.no_order;
+  $("#btn-send-result").data('no-order', no_order);
+  // alert(a);
   // set transaction id for edit patient details
   $("#edit-patient-details-btn").data('transaction-id', transactionId);
 
@@ -180,22 +183,22 @@ var onSelectTransaction = (selectedData) => {
   $('#btnPrintHasil').attr('href',baseUrl('printHasilTest/'+transactionId))
 
   // // button print hasil
-  // $("#btnPrintHasil").on('click', function() {
+  $("#btnPrintHasil").on('click', function() {
 
-  //   // radio bahasa
-  //   var selectedVal2 = "";
-  //   var selected2 = $("input[type='radio'][name='radios22']:checked");
-  //   if (selected2.length > 0) {
-  //       selectedVal2 = selected2.val();
-  //   }
+    // radio bahasa
+    var selectedVal2 = "";
+    var selected2 = $("input[type='radio'][name='radios22']:checked");
+    if (selected2.length > 0) {
+        selectedVal2 = selected2.val();
+    }
 
-  //   if(selectedVal2 == 'Bahasa Indonesia'){
-  //     $('#btnPrintHasil').attr('href',baseUrl('printHasilTest/'+transactionId));
-  //   }else{
-  //     $('#btnPrintHasil').attr('href',baseUrl('printHasilTestEnglish/'+transactionId));
-  //   }   
+    if(selectedVal2 == 'None Watermark'){
+      $('#btnPrintHasil').attr('href',baseUrl('printHasilTest/'+transactionId));
+    }else{
+      $('#btnPrintHasil').attr('href',baseUrl('printHasilTestWatermark/'+transactionId));
+    }   
 
-  // });
+  });
 
 
 
@@ -488,6 +491,27 @@ var printOptions = function() {
 
   });
 }
+var btnSendResult = function(){
+  $("#btn-send-result").on('click', function() {
+    const no_order = $(this).data('no-order');
+
+    $.ajax({
+      url: baseUrl('api/send_result/'+no_order),
+      type: 'get',
+      success: function(data) {
+        if(data.message == 'integration_success'){
+          alert('Send data to ERM successfully');
+          // $('#btn-send-result').prop('disabled', true);
+        }else{
+          alert('Send data to ERM failed');
+          // $('#btn-send-result').prop('disabled', false);
+        }
+        PostAnalyticDatatable.refreshTable();
+      }
+    });
+    
+  });
+}
 
 $.ajaxSetup({
   headers: {
@@ -498,6 +522,7 @@ $.ajaxSetup({
 document.addEventListener('DOMContentLoaded', function () {
   PostAnalyticDatatable.init();
   printOptions();
+  btnSendResult();
   DateRangePicker();
   Select2ServerSideTest('group').init();
   $('.btnPrintHasil').printPage();

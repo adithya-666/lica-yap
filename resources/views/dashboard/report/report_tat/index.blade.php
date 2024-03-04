@@ -29,8 +29,8 @@
                                 <div class="d-flex justify-content-between mb-5">
                                     <div class="col-lg-3">
                                         <button type="button" id="print-default-report" href="{{url('report/tat-print')}}" class="btn btn-sm btn-light btnPrint">Print Default Report</button>
-                                        <button type="button" id="print-group-report" href="{{url('report/tat-group-print')}}" class="btn btn-sm btn-light btnGroupPrint">Print Group Report</button>
-                                        <button type="button" id="export-report" class="btn btn-sm btn-light" onclick="tablesToExcel(['datatables'], ['TAT Report'], 'TAT-Report.xls', 'Excel')">Export Excel</button>
+                                        {{-- <button type="button" id="print-group-report" href="{{url('report/tat-group-print')}}" class="btn btn-sm btn-light btnGroupPrint">Print Group Report</button> --}}
+                                        <a type="button"  href="{{url('report/tat-export')}}" id="export-report" class="btn btn-sm btn-light" >Export Excel</a>
                                     </div>
                                     <div class="col-lg-3">
 
@@ -70,9 +70,9 @@
                                             <th class="text-start" width="10%">No Lab</th>
                                             <th class="text-start" width="8%">Check In Time</th>
                                             <th class="text-start" width="8%">Analytic Time</th>
+                                            <th class="text-start" width="8%">Verify Time</th>
                                             <th class="text-start" width="8%">Validate Time</th>
-                                            <th class="text-start" width="8%">Print Time</th>
-                                            <th class="text-start" width="8%">Total Time</th>
+                                            <th class="text-start" width="8%">Post Time</th>
                                         </tr>
                                     </thead>
                                     <tbody class="fw-bold"></tbody>

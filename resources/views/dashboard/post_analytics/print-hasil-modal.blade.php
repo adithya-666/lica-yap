@@ -28,21 +28,21 @@
                     </div>
 
                     <div class="fv-row row mb-4">
-                        <div class="col-md-3"><label class="form-label fs-7">Language Option</label></div>
+                        <div class="col-md-3"><label class="form-label fs-7">Print Option</label></div>
                         <div class="col-md-9">
                             <form class="form">
                                 <div class="form-group row">
                                     <div class="col-9 col-form-label">
                                         <div class="radio-inline">
                                             <label class="radio radio-primary">
-                                                <input type="radio" name="radios22" value="Bahasa Indonesia" checked="checked" />
+                                                <input type="radio" name="radios22" value="None Watermark" checked="checked" />
                                                 <span></span>
-                                                Bahasa Indonesia
+                                                Hasil Asli
                                             </label>
                                             <label class="radio radio-primary">
-                                                <input type="radio" name="radios22" value="English" />
+                                                <input type="radio" name="radios22" value="Watermak" />
                                                 <span></span>
-                                                English
+                                                Hasil Copy
                                             </label>
                                         </div>
                                     </div>

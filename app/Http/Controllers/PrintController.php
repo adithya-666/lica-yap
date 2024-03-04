@@ -333,6 +333,9 @@ class PrintController extends Controller
             ->where('is_print', '=', 1)
             ->orderBy('sequence', 'asc')
             ->orderBy('sub_group', 'asc');
+           
+
+      
 
         $query_group = DB::table('finish_transaction_tests')
             ->select('group_name')
@@ -457,6 +460,10 @@ class PrintController extends Controller
             $last_draw_time = Carbon::now();
         }
 
+        // echo "<pre>";
+        // print_r($tests);
+        // die;
+
         $data = [
             // 'tests' => $sorted_test,
             'tests' => $tests,
@@ -470,11 +477,182 @@ class PrintController extends Controller
             "age" => $age,
         ];
 
-        // echo "<pre>";
-        // print_r($sorted_test);
-        // die();
+    
 
         return view('prints.hasil-test', $data);
+    }
+
+    public function hasilTestWatermark($id)
+    {
+        // $id = 31;
+        // dd($id);
+        // $testArr = json_decode($testlist);
+        $judul = "Print Result";
+        $data['title'] = $judul;
+
+        DB::table('finish_transactions')
+            ->where('id', $id)
+            ->update([
+                'status' => 4,
+                'print' => DB::raw('print + 1'),
+            ]);
+
+        $transaction = DB::table('finish_transactions')
+            ->select('finish_transactions.*')
+            ->where('finish_transactions.id', '=', $id)->first();
+
+        $query_tests = DB::table('finish_transaction_tests')
+            ->where('finish_transaction_id', '=', $id)
+            ->where('is_print', '=', 1)
+            ->orderBy('sequence', 'asc')
+            ->orderBy('sub_group', 'asc');
+           
+
+      
+
+        $query_group = DB::table('finish_transaction_tests')
+            ->select('group_name')
+            ->where('finish_transaction_id', '=', $id)
+            // ->orderBy('sequence', 'asc')
+            ->groupBy('group_name')
+            ->get();
+
+        $query_subgroup = DB::table('finish_transaction_tests')
+            ->selectRaw("CASE WHEN sub_group IS NULL OR sub_group = '' THEN '' ELSE sub_group END as sub_group_grouped")
+            ->where('finish_transaction_id', '=', $id)
+            ->groupBy('sub_group_grouped')
+            ->get();
+        // dd($query_transaction);
+        $reg_time = Carbon::parse($transaction->created_time)->format('d/m/Y H:i');
+        $analitik_time = Carbon::parse($transaction->analytic_time)->format('d/m/Y H:i');
+
+        // print time       
+        $print_time_query = DB::table('finish_transaction_tests')
+            ->select(DB::raw('MIN(validate_time) AS validate_time'))
+            ->where('finish_transaction_id', '=', $id)->first();
+        if ($print_time_query) {
+            $print_time = $print_time_query->validate_time;
+        } else {
+            $print_time = Carbon::now();
+        }
+
+        $tests = $query_tests->get();
+
+        $bulan_1 = Carbon::now()->format('F');
+        $tgl = Carbon::now()->format('d');
+        $tahun = Carbon::now()->format('Y');
+
+        if ($bulan_1 == "January") {
+            $bulan_st = "Januari";
+        } else if ($bulan_1 == "February") {
+            $bulan_st = "Februari";
+        } else if ($bulan_1 == "March") {
+            $bulan_st = "Maret";
+        } else if ($bulan_1 == "April") {
+            $bulan_st = "April";
+        } else if ($bulan_1 == "May") {
+            $bulan_st = "Mei";
+        } else if ($bulan_1 == "June") {
+            $bulan_st = "Juni";
+        } else if ($bulan_1 == "July") {
+            $bulan_st = "Juli";
+        } else if ($bulan_1 == "August") {
+            $bulan_st = "Agustus";
+        } else if ($bulan_1 == "September") {
+            $bulan_st = "September";
+        } else if ($bulan_1 == "October") {
+            $bulan_st = "Oktober";
+        } else if ($bulan_1 == "November") {
+            $bulan_st = "November";
+        } else if ($bulan_1 == "December") {
+            $bulan_st = "Desember";
+        }
+
+        $copy = $transaction->print;
+        $user = Auth::user();
+
+        DB::table('log_print')
+            ->insert([
+                'finish_transaction_id' => $id,
+                'printed_at' => Carbon::now()->toDateTimeString(),
+                'copied' => $copy,
+                'print_by' => $user->id,
+            ]);
+
+        $tgl_result = $tgl . " " . $bulan_st . " " . $tahun;
+        $sorted_test = [];
+        $group_array = [];
+
+        // print_r($query_group);
+        // die;
+
+        foreach ($query_group as $group) {
+            $group_array[$group->group_name] = [];
+            array_push($group_array[$group->group_name], $group->group_name);
+            foreach ($query_subgroup as $subgroup) {
+                foreach ($tests as $test) {
+                    if ($test->result_status == AnalyticController::RESULT_STATUS_NORMAL) {
+                        $status = "Normal";
+                    } else if ($test->result_status == AnalyticController::RESULT_STATUS_LOW || $test->result_status == AnalyticController::RESULT_STATUS_HIGH || $test->result_status == AnalyticController::RESULT_STATUS_ABNORMAL) {
+                        $status = "Abnormal";
+                    } else if ($test->result_status == AnalyticController::RESULT_STATUS_CRITICAL) {
+                        $status = "Critical";
+                    } else {
+                        $status = "-";
+                    }
+                    $test->result_status_label = $status;
+                    if (($test->sub_group == $subgroup->sub_group_grouped) && ($test->group_name == $group->group_name)) {
+                        if (($subgroup->sub_group_grouped != '') && (!in_array($subgroup->sub_group_grouped, $group_array[$group->group_name]))) {
+                            array_push($group_array[$group->group_name], $subgroup->sub_group_grouped);
+                        }
+                        array_push($group_array[$group->group_name], $test->test_name);
+                        array_push($sorted_test, $test);
+                        //echo $group->group_name . " - " . $subgroup->sub_group_grouped . " - " . $test->test_name . "<br>";
+                    }
+                }
+            }
+        }
+        $born = Carbon::createFromFormat('Y-m-d', $transaction->patient_birthdate);
+        $age = $born->diff(Carbon::now())->format('%y Thn %m Bln %d Hr');
+        $first_draw_time_query = DB::table('finish_transaction_tests')
+            ->select(DB::raw('MIN(draw_time) AS draw_time'))
+            ->where('finish_transaction_id', '=', $id)->first();
+        if ($first_draw_time_query) {
+            $first_draw_time = $first_draw_time_query->draw_time;
+        } else {
+            $first_draw_time = Carbon::now();
+        }
+
+        // last draw time
+        $last_draw_time_query = DB::table('finish_transaction_tests')
+            ->select(DB::raw('MAX(draw_time) AS draw_time'))
+            ->where('finish_transaction_id', '=', $id)->first();
+        if ($last_draw_time_query) {
+            $last_draw_time = $last_draw_time_query->draw_time;
+        } else {
+            $last_draw_time = Carbon::now();
+        }
+
+        // echo "<pre>";
+        // print_r($tests);
+        // die;
+
+        $data = [
+            // 'tests' => $sorted_test,
+            'tests' => $tests,
+            'groups' => $group_array,
+            'reg_time' => $reg_time,
+            'analitik_time' => $analitik_time,
+            'print_time' => $print_time,
+            'tgl_result' => $tgl_result,
+            'last_draw_time' => $last_draw_time,
+            "transaction" => $transaction,
+            "age" => $age,
+        ];
+
+    
+
+        return view('prints.hasil-test-watermark', $data);
     }
 
     public function printAnalytic($id, $group_id = null)

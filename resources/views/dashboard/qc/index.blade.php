@@ -127,7 +127,7 @@
                                 <div class="row pt-3">
                                     <div class="col-md-4">
                                         <div class="fv-row row mb-4">
-                                            <label class="form-label fs-7 col-md-3" style="text-align: right; font-weight: bold">Level 1</label>
+                                            <label class="form-label fs-7 col-md-3" style="text-align: right; font-weight: bold">Level 1 (LOW)</label>
                                             <div class="col-md-9">
                                                 <input type="hidden" name="level[]" value="1" class="form-control form-control-solid form-control-sm">
                                             </div>
@@ -135,7 +135,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="fv-row row mb-4">
-                                            <label class="form-label fs-7 col-md-3" style="text-align: right; font-weight: bold">Level 2</label>
+                                            <label class="form-label fs-7 col-md-3" style="text-align: right; font-weight: bold">Level 2 (NORMAL)</label>
                                             <div class="col-md-9">
                                                 <input type="hidden" name="level[]" value="2" class="form-control form-control-solid form-control-sm">
                                             </div>
@@ -143,7 +143,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="fv-row row mb-4">
-                                            <label class="form-label fs-7 col-md-3" style="text-align: right; font-weight: bold">Level 3</label>
+                                            <label class="form-label fs-7 col-md-3" style="text-align: right; font-weight: bold">Level 3 (HIGH)</label>
                                             <div class="col-md-9">
                                                 <input type="hidden" name="level[]" value="3" class="form-control form-control-solid form-control-sm">
                                             </div>
@@ -377,13 +377,13 @@
 
                                         <ul class="nav nav-tabs nav-line-tabs mb-5 fs-6">
                                             <li class="nav-item">
-                                                <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_1">Level 1</a>
+                                                <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_1">Level 1 (LOW)</a>
                                             </li>
                                             <li class="nav-item">
-                                                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_2">Level 2</a>
+                                                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_2">Level 2 (NORMAL)</a>
                                             </li>
                                             <li class="nav-item">
-                                                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_3">Level 3</a>
+                                                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_3">Level 3 (HIGH)</a>
                                             </li>
                                         </ul>
 

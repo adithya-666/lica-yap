@@ -11,7 +11,7 @@ var columnsDataTable = [
     },
     { data: 'analyzer_id'},
     { data: 'analyzer_name'},
-    {data: 'total_test'}
+    {data: 'total'}
   ];
   
   // Datatable Component
